@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Journalizer",
+    "slug": "Journalizer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/journalizer-icon-5.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/journalizer-splash-screen-3.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/journalizer-icon-5.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.anonymous.Journalizer"
+    },
+    "web": {
+      "favicon": "./src/assets/favicon.png"
+    }
+  }
+}
