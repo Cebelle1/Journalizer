@@ -1,26 +1,34 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Avatar, Badge } from 'react-native-paper';
-import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
+import { GradientTextBT, GradientTextTB, GradientTextLR, GradientTextRL } from '../styles/GradientText';
+import { GradientIconBT, GradientIconLR, GradientIconRL, GradientIconTB } from '../styles/GradientIcon';
 
 // Assets
 import MatCommIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import MatIcon from 'react-native-vector-icons/MaterialIcons';
+import IonicIcon from 'react-native-vector-icons/Ionicons';
 
 export default function NavigationDrawer({ navigation }) {
-    //const currentRoute = useNavigationState((state) => state.routes[state.index].name);
     const nav = useNavigation();
     const currentRoute = nav.getState()?.routes[nav.getState().index]?.name; 
-    console.log(currentRoute);
+
     return (
         <View style={styles.container}>
+            <View style={styles.divider} />
+            
             {/* Header */}
             <View style={styles.header}>
-            
-              <MatCommIcon name="notebook-outline" size={24} color="#6a6cff" style={styles.icon} />
-              <Text style={styles.brandText}>Journalizer</Text>
+              <GradientIconBT 
+                IconComponent={IonicIcon}
+                name="planet-outline" 
+                size={36} 
+                gradientColors={styles.gradientHeader} 
+                style={styles.icon} />
+
+              <GradientTextBT text="Journalizer" gradientColors={styles.gradientHeader} />
             </View>
 
+            
             {/* Menu Options */}
             <ScrollView contentContainerStyle={styles.menuContainer}>
                 <MenuItem 
@@ -71,7 +79,7 @@ const MenuItem = ({ icon, label, badge, active, badgeColor = '#3d3b60' , onPress
       style={[styles.menuItem, active && styles.activeItem]}
       onPress={onPress}>
       
-      <MatCommIcon name={icon} size={24} color={active ? '#3d3b60' : '#6B7280'} />
+      <MatCommIcon name={icon} size={24} color={active ? styles.activeIcon : styles.inactiveIcon} />
       <Text style={[styles.menuText, active && styles.activeText]}>{label}</Text>
       {badge && (
         <Badge
@@ -100,19 +108,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
-  gradientHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 10,
-  },
+  gradientHeader: ['#623c73', '#c599c7'],
   icon: {
     marginRight: 10,
-  },
-  brandText: {
-    color: '#6a6cff',
-    fontSize: 20,
-    fontWeight: 'bold',
   },
   menuContainer: {
     flexGrow: 1,
@@ -126,16 +124,18 @@ const styles = StyleSheet.create({
   menuText: {
     marginLeft: 15,
     fontSize: 16,
-    color: '#6B7280',
+    color: '#633c73',
   },
   activeItem: {
-    backgroundColor: 'rgba(225,223,235,255)',
+    backgroundColor: 'rgba(239,236,242,255)',
     borderRadius: 8,
   },
   activeText: {
-    color: '#3d3b60',
+    color: '#623c73',
     fontWeight: 'bold',
   },
+  activeIcon: '#613f68',
+  inactiveIcon: '#6B7280',
   badge: {
     marginLeft: 'auto',
     alignSelf: 'center',

@@ -4,21 +4,21 @@
     "slug": "Journalizer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/journalizer-icon-5.png",
+    "icon": "./src/assets/journalizer-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./src/assets/journalizer-splash-screen-3.png",
+      "image": "./src/assets/journalizer-splash-screen-4.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ddd7e2"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/journalizer-icon-5.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./src/assets/journalizer-icon.png",
+        "backgroundColor": "#ddd7e2"
       },
       "package": "com.anonymous.Journalizer"
     },
