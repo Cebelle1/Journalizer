@@ -4,6 +4,8 @@ import NavigationDrawer from './src/components/NavigationDrawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { loadFonts } from './src/styles/Font.js';
+import { TouchableOpacity } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Screens
 import JournalScreen from './src/screens/JournalScreen.js';
@@ -17,6 +19,7 @@ const Stack = createStackNavigator();
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isCreatingEntry, setIsCreatingEntry] = useState(false); // Track Create Journal Entry screen to hide Drawer Header
+  const [isViewingEntry, setIsViewingEntry] = useState(false); // Track View Journal Entry screen to show Search Icon
 
   useEffect(() => {
     const loadResources = async () => {
@@ -38,11 +41,22 @@ export default function App() {
       >
         <Drawer.Screen 
           name="Journals" 
-          options={{ headerShown: !isCreatingEntry }} // Hide header if creating entry
+          options={{ 
+            headerShown: !isCreatingEntry,    // Hide header if creating entry
+            headerRight: () => (
+              isViewingEntry && (
+                <TouchableOpacity style={{ marginRight: 15 }}>
+                  <Ionicons name="search" size={24} color="black" />
+                </TouchableOpacity>
+              )
+            )
+          }} 
         >
           {() => (
             <JournalStack 
-              setIsCreatingEntry={setIsCreatingEntry} // Set isCreatingEntry state
+              setIsCreatingEntry={setIsCreatingEntry}   
+              setIsViewingEntry={setIsViewingEntry}
+              isViewingEntry={isViewingEntry}
             />
           )}
         </Drawer.Screen>
@@ -53,25 +67,38 @@ export default function App() {
   );
 }
 
-const JournalStack = ({ setIsCreatingEntry }) => {
+const JournalStack = ({ setIsCreatingEntry, setIsViewingEntry, isViewingEntry }) => {
   return (
     <Stack.Navigator>
       <Stack.Screen
         name="JournalScreen"
         component={JournalScreen}
-        options={{ headerShown: false }} // Hide header for JournalScreen
+        options={{ headerShown: false }} // Hide header for Journal Screen
         listeners={{
-          focus: () => setIsCreatingEntry(false), // Reset to false when focused
+          focus: () => {
+            setIsCreatingEntry(false) // Show Drawer Header
+            setIsViewingEntry(true)   // Show Search Icon
+          },
+          blur: () => {
+            setIsViewingEntry(false)  // Reset to false when blurred
+            setIsCreatingEntry(true)  // Reset to true when blurred
+          }
         }}
       />
       <Stack.Screen
         name="Create Journal Entry"
         component={CreateJournalEntryScreen}
-        options={{ headerShown: true }} // Show header for Create Journal Entry
         listeners={{
-          focus: () => setIsCreatingEntry(true), // Set to true when focused
-          blur: () => setIsCreatingEntry(false), // Reset to false when blurred
+          focus: () => {
+            setIsCreatingEntry(true)  // Hide Drawer Header
+            setIsViewingEntry(false)  // Hide Search Icon
+          },
+          blur: () => {
+            setIsCreatingEntry(false) // Reset to false when blurred
+            setIsViewingEntry(true)   // Reset to true when blurred
+          }, 
         }}
+        options={{ headerShown: true }} // Show Stack header for Create Journal Entry
       />
     </Stack.Navigator>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import IonicIcon from 'react-native-vector-icons/Ionicons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function JournalScreen({ navigation }) {
   const handleAddJournal = () => {
@@ -12,7 +12,7 @@ export default function JournalScreen({ navigation }) {
       {/* Scrollable Journal Entries */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.headerText}>Your Journal Entries</Text>
-        
+
         {/* Dummy Journal Entries */}
         {Array.from({ length: 10 }).map((_, index) => (
           <View key={index} style={styles.entry}>
@@ -23,7 +23,7 @@ export default function JournalScreen({ navigation }) {
 
       {/* Floating Action Button */}
       <TouchableOpacity style={styles.fab} onPress={handleAddJournal}>
-        <IonicIcon name="add" size={32} color="#ffffff" />
+        <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
     </View>
   );
