@@ -1,17 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 
-export default function CloudSyncScreen() {
+export default function CreateJournalEntry() {
     
     return (
-        <View style={cloudSyncStyles.container}>
-            <Text style={cloudSyncStyles.text}> Cloud Sync Screen </Text>
-        </View>
+        <View style={styles.container}>
+            <Text style={styles.title}>Journal Entry</Text>
+      </View>
     );
 }
 
-const cloudSyncStyles = StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
