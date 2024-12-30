@@ -4,11 +4,11 @@
     "slug": "Journalizer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/journalizer-icon.png",
+    "icon": "./src/assets/image/journalizer-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./src/assets/journalizer-splash-screen-4.png",
+      "image": "./src/assets/image/journalizer-splash-screen-4.png",
       "resizeMode": "contain",
       "backgroundColor": "#ddd7e2"
     },
@@ -17,13 +17,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/journalizer-icon.png",
+        "foregroundImage": "./src/assets/image/journalizer-icon.png",
         "backgroundColor": "#ddd7e2"
       },
       "package": "com.anonymous.Journalizer"
     },
     "web": {
-      "favicon": "./src/assets/favicon.png"
-    }
+      "favicon": "./src/assets/image/journalizer-icon.png"
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

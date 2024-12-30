@@ -22,10 +22,13 @@ export default function NavigationDrawer({ navigation }) {
                 IconComponent={IonicIcon}
                 name="planet-outline" 
                 size={36} 
-                gradientColors={styles.gradientHeader} 
-                style={styles.icon} />
+                gradientColors={styles.gradientHeaderColor} 
+                style={styles.gradientIcon} />
 
-              <GradientTextBT text="Journalizer" gradientColors={styles.gradientHeader} />
+              <GradientTextBT text="Journalizer" 
+                gradientColors={styles.gradientHeaderColor} 
+                fontFamily={styles.gradientHeaderFont} 
+                style={styles.gradientText}/>
             </View>
 
             
@@ -65,7 +68,7 @@ export default function NavigationDrawer({ navigation }) {
             <View style={styles.footer}>
                 <Avatar.Image
                 size={30}
-                source={{ uri: 'https://randomuser.me/api/portraits/women/45.jpg' }} // Replace with actual image
+                source={{ uri: 'https://randomuser.me/api/portraits/women/45.jpg' }}
                 />
                 <MatCommIcon name="bell-outline" size={24} color="#fff" />
             </View>
@@ -108,9 +111,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
-  gradientHeader: ['#623c73', '#c599c7'],
-  icon: {
+  gradientHeaderColor: ['#623c73', '#c599c7'],
+  gradientHeaderFont: 'GenBkBasB',
+  gradientIcon: {
     marginRight: 10,
+  },
+  gradientText: {
+    fontSize: 26,
   },
   menuContainer: {
     flexGrow: 1,
@@ -124,6 +131,7 @@ const styles = StyleSheet.create({
   menuText: {
     marginLeft: 15,
     fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
     color: '#633c73',
   },
   activeItem: {
@@ -132,7 +140,7 @@ const styles = StyleSheet.create({
   },
   activeText: {
     color: '#623c73',
-    fontWeight: 'bold',
+    fontFamily: 'Montserrat-Bold',
   },
   activeIcon: '#613f68',
   inactiveIcon: '#6B7280',
