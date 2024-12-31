@@ -87,6 +87,7 @@ export const deleteJournalEntry = async (id) => {
 };
 
 // =============Test
+/*
 (async () => {
   const db = await createJournalDB();
   // Create an entry
@@ -117,3 +118,4 @@ export const deleteJournalEntry = async (id) => {
   const updatedEntries = await readAllJournalEntries();
   console.log(updatedEntries);
 })();
+*/
