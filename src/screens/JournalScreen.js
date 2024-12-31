@@ -3,6 +3,7 @@ import { View, Text, ImageBackground, FlatList, StyleSheet, TouchableOpacity} fr
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import BackgroundImage from '../assets/image/journalizer-background-2.png';
 import { formatYearMonthDay, formatYear } from '../utils/dataUtils';
+import { themeStyle } from '../styles/theme';
 
 // Database
 import { readJournalEntry, readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
@@ -43,7 +44,7 @@ export default function JournalScreen({ navigation }) {
           <TouchableOpacity 
             key={item.id}
             style={styles.entry} 
-            onPress={() => navigation.navigate('JournalEntry', { id: item.id })}  // Pass id to update entry
+            onPress={() => navigation.navigate('Journal Entry', { id: item.id })}  // Pass id to update entry
             >
             <Text style={styles.entryTextTitle}>{item.title}</Text>
             <Text style={styles.entryText}>{item.body}</Text>
@@ -57,7 +58,7 @@ export default function JournalScreen({ navigation }) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
-          navigation.navigate('JournalEntry'); // Stack nav to JournalEntryScreen
+          navigation.navigate('Journal Entry'); // Stack nav to JournalEntryScreen
         }}
       >
         <Ionicons name="add" size={32} color="#ffffff" />
@@ -79,11 +80,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'Montserrat-Bold',
     marginVertical: 20,
-    color: '#3d3b60',
+    color: themeStyle.darkPurple4,
     textAlign: 'center',
   },
   entry: {
-    backgroundColor: '#ffffff',
+    backgroundColor: themeStyle.lightPurpleTint,
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
@@ -94,18 +95,19 @@ const styles = StyleSheet.create({
   },
   entryTextTitle: {
     fontSize: 20,
-    color: '#3d3b60',
-    fontFamily: 'Montserrat-Bold',
+    color: themeStyle.darkPurple1,
+    fontFamily: 'GenBasB',
   },
   entryText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: themeStyle.darkGrey1,
+    fontFamily: 'GenBasR',
   },
   fab: {
     position: 'absolute',
     bottom: 20,
     alignSelf: 'center',
-    backgroundColor: '#c599c7', // Light purple color
+    backgroundColor: themeStyle.darkPurple2, // Light purple color
     borderRadius: 30,
     width: 60,
     height: 60,

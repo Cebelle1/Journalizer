@@ -7,7 +7,9 @@ import { loadFonts } from './src/styles/Font.js';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import * as SplashScreen from 'expo-splash-screen';
+import { themeStyle
 
+ } from './src/styles/theme.js';
 // Screens
 import JournalScreen from './src/screens/JournalScreen.js';
 import CloudSyncScreen from './src/screens/CloudSyncScreen.js';
@@ -53,6 +55,7 @@ export default function App() {
         initialRouteName="Journals"
         drawerContent={(props) => <NavigationDrawer {...props} />}
         screenOptions={{
+          headerStyle: drawerStyles.headerStyle,
           headerTitleStyle: drawerStyles.headerTitleStyle,
          }}
       >
@@ -87,6 +90,7 @@ const JournalStack = ({ setIsCreatingEntry}) => {
     <Stack.Navigator
       initialRouteName="JournalScreen"
       screenOptions={{
+        headerStyle: stackStyles.headerStyle,
         headerTitleStyle: stackStyles.headerTitleStyle,
       }}>
       <Stack.Screen
@@ -103,7 +107,7 @@ const JournalStack = ({ setIsCreatingEntry}) => {
         }}
       />
       <Stack.Screen
-        name="JournalEntry"
+        name="Journal Entry"
         component={JournalEntryScreen}
         listeners={{
           focus: () => {
@@ -120,9 +124,23 @@ const JournalStack = ({ setIsCreatingEntry}) => {
 };
 
 const drawerStyles = StyleSheet.create({
-  headerTitleStyle: {fontFamily: 'Montserrat-Bold'},
+  headerStyle: {
+    backgroundColor: themeStyle.lightPurple2,
+    shadowColor: themeStyle.black,
+  },
+  headerTitleStyle: {
+    fontFamily: 'Montserrat-Bold',
+    color: themeStyle.black,
+  },
 });
 
 const stackStyles = StyleSheet.create({
-  headerTitleStyle: {fontFamily: 'Montserrat-Bold'},
+  headerStyle: {
+    backgroundColor: themeStyle.lightPurple3,
+    shadowColor: themeStyle.black,
+  },
+  headerTitleStyle: {
+    fontFamily: 'Montserrat-Bold',
+    color: themeStyle.black,
+  },
 });

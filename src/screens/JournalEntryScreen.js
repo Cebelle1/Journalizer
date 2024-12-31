@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { readJournalEntry, updateJournalEntry, createJournalEntry } from '../services/journalDB';
 import BackgroundImage from '../assets/image/journalizer-background-1.png';
+import { themeStyle } from '../styles/theme';
 
 // Used to prevent the keyboard from shifting the background image
 const d = Dimensions.get('window');
@@ -13,7 +14,7 @@ export default function JournalEntryScreen({ navigation, route }){
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const entryId  = route.params.id || {}; //Get entryId if its updating an existing entry
+  const entryId  = route.params?.id ?? {}; //Get entryId if its updating an existing entry
 
   // Load existing entry if entryId is provided
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function JournalEntryScreen({ navigation, route }){
 
         <TextInput
           placeholder="Title"
-          style={styles.input}
+          style={[styles.input, styles.titleInput]}
           value={title}
           onChangeText={setTitle}
         />
@@ -99,7 +100,7 @@ export default function JournalEntryScreen({ navigation, route }){
             if (newTag) setTags([...tags, newTag]);
           }}
         >
-          <Text style={styles.tagButtonText}>Add Tag</Text>
+          <Text style={styles.tagButtonText}>Add Tag prolly gonna change this</Text>
 
         </TouchableOpacity>
         <View style={styles.tagsContainer}>
@@ -109,7 +110,11 @@ export default function JournalEntryScreen({ navigation, route }){
             </Text>
           ))}
         </View>
-        <Button title="Save" onPress={onSave} />
+        <TouchableOpacity 
+          style={styles.saveButton} 
+          onPress={onSave}>
+          <Text style={styles.saveButton}>Save</Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </ImageBackground>
@@ -120,19 +125,34 @@ const styles = StyleSheet.create({
   keyboardAvWContainer: { flex: 1 },
   container: { padding: 20 },
   dateText: { 
-    fontSize: 18, 
-    marginBottom: 20 },
+    fontSize: 20, 
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 20,
+    borderWidth: 1,
+    padding: 5,
+    borderRadius: 5,
+    backgroundColor: themeStyle.lightPurpleTint,
+  },
   input: { 
     borderWidth: 1, 
     padding: 10, 
     marginBottom: 20, 
     borderRadius: 5,
-    backgroundColor: '#ffffff',
-    opacity: 0.9
+    backgroundColor: themeStyle.lightPurpleTint,
+    opacity: 0.9,
+    textAlignVertical: 'top'
     },
-  bodyInput: { height: 150 },
+  titleInput: { 
+    fontSize: 24,
+    fontFamily: 'GenBasB',
+   },
+  bodyInput: { 
+    height: 200,
+    fontFamily: 'GenBasR',
+    fontSize: 18,
+  },
   tagButton: { 
-    backgroundColor: 'lightgray', 
+    backgroundColor: themeStyle.white, 
     padding: 10, 
     borderRadius: 5, 
     alignItems: 'center' 
@@ -148,6 +168,15 @@ const styles = StyleSheet.create({
     margin: 5, 
     padding: 5, 
     borderRadius: 5 
+    },
+  saveButton: { 
+    backgroundColor: themeStyle.darkPurple1, 
+    color: themeStyle.white, 
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    padding: 5,
+    textAlign: 'center', 
+    borderRadius: 5, 
     },
   backgroundImage: {        // Absolute position to prevent keyboard from shifting the background image
     position: 'absolute',
