@@ -67,7 +67,7 @@ export const deleteJournalEntry = async (id) => {
   return result.changes;
 };
 
-// Example usage
+// Test
 (async () => {
   // Create an entry
   const newEntryId = await createJournalEntry({
@@ -84,7 +84,7 @@ export const deleteJournalEntry = async (id) => {
   // Update the entry
   await updateJournalEntry(db, {
     id: newEntryId,
-    date: '2024-12-28',
+    date: '2024-12-30',
     title: 'Updated Title',
     body: 'Updated body content.',
     tags: ['updated', 'journal'],
