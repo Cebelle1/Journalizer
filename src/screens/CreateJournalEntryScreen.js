@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Dimensions } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { createJournalEntry } from '../services/journalDB';
 import BackgroundImage from '../assets/image/journalizer-background-1.png';
+
+// Used to prevent the keyboard from shifting the background image
+const d = Dimensions.get('window');
 
 export default function CreateJournalEntryScreen({ navigation }){
   const [date, setDate] = useState(new Date());
@@ -10,20 +13,25 @@ export default function CreateJournalEntryScreen({ navigation }){
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
-  const onSave = () => {
-    
-    createJournalEntry(date.toISOString(), title, body, tags, (error) => {
-      if (error) {
-        console.error('Failed to save journal entry:', error);
-      } else {
-        console.log('Saving journal entry:', date, title, body, tags);
-        navigation.navigate("Journals");
-      }
-    });
+
+  const onSave = async() => {
+    try {
+      const newEntryId = await createJournalEntry({
+        date: date.toISOString(),
+        title: title,
+        body: body,
+        tags: tags,
+      });
+
+      console.log('New journal entry ID:', newEntryId);
+      navigation.navigate('JournalScreen');
+    } catch (error) {
+      console.error('Failed to save journal entry:', error);
+    }
   };
 
   return (
+    
     <ImageBackground source={BackgroundImage} style={styles.backgroundImage}>
       <ScrollView contentContainerStyle={styles.container}>
           {/* Date Text that expands to Date Picker */}
@@ -73,12 +81,14 @@ export default function CreateJournalEntryScreen({ navigation }){
           ))}
         </View>
         <Button title="Save" onPress={onSave} />
+
       </ScrollView>
     </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvWContainer: { flex: 1 },
   container: { padding: 20 },
   dateText: { 
     fontSize: 18, 
@@ -87,7 +97,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     padding: 10, 
     marginBottom: 20, 
-    borderRadius: 5 
+    borderRadius: 5,
+    backgroundColor: '#ffffff',
+    opacity: 0.9
     },
   bodyInput: { height: 150 },
   tagButton: { 
@@ -108,9 +120,10 @@ const styles = StyleSheet.create({
     padding: 5, 
     borderRadius: 5 
     },
-  backgroundImage: {
-      flex: 1,
-      resizeMode: 'cover',
-      justifyContent: 'center',
+  backgroundImage: {        // Absolute position to prevent keyboard from shifting the background image
+    position: 'absolute',
+    flex: 1,
+    width: d.width,
+    height: d.height
     },
 });

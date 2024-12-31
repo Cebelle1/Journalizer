@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-const openJournalDB = async () => {
+const createJournalDB = async () => {
   const db = await SQLite.openDatabaseAsync('JournalDB.db');
 
   // Initialize the database with a journal entries table
@@ -19,9 +19,21 @@ const openJournalDB = async () => {
   return db;
 };
 
+// Store the database instance
+let dbInstance = null;
+
+// Get the database instance (ensures it's initialized)
+const getDBInstance = async () => {
+  if (!dbInstance) {
+    dbInstance = await createJournalDB();
+  }
+  return dbInstance;
+};
+
 // Create a new journal entry
 export const createJournalEntry = async ({ date, title, body, tags }) => {
-  const db = await openJournalDB();
+  const db = await getDBInstance();
+  console.log('Creating journal entry:', date, title, body, tags);
   const result = await db.runAsync(
     `INSERT INTO journal_entries (date, title, body, tags) VALUES (?, ?, ?, ?)`,
     date,
@@ -35,7 +47,7 @@ export const createJournalEntry = async ({ date, title, body, tags }) => {
 
 // Read all journal entries
 export const readJournalEntries = async () => {
-  const db = await openJournalDB();
+  const db = await getDBInstance();
   const allRows = await db.getAllAsync(`SELECT * FROM journal_entries`);
   console.log('All journal entries:', allRows);
   return allRows;
@@ -43,7 +55,7 @@ export const readJournalEntries = async () => {
 
 // Update a journal entry
 export const updateJournalEntry = async ({ id, date, title, body, tags }) => {
-  const db = await openJournalDB();
+  const db = await getDBInstance();
   const result = await db.runAsync(
     `UPDATE journal_entries SET date = ?, title = ?, body = ?, tags = ? WHERE id = ?`,
     date,
@@ -58,7 +70,7 @@ export const updateJournalEntry = async ({ id, date, title, body, tags }) => {
 
 // Delete a journal entry
 export const deleteJournalEntry = async (id) => {
-  const db = await openJournalDB();
+  const db = await getDBInstance();
   const result = await db.runAsync(
     `DELETE FROM journal_entries WHERE id = ?`,
     id
@@ -67,13 +79,14 @@ export const deleteJournalEntry = async (id) => {
   return result.changes;
 };
 
-// Test
+// =============Test
 (async () => {
+  const db = await createJournalDB();
   // Create an entry
   const newEntryId = await createJournalEntry({
     date: '2024-12-28',
-    title: 'A Day to Remember',
-    body: 'Today was a remarkable day.',
+    title: 'Journalizer',
+    body: 'Journalizer is a journaling app.',
     tags: ['happy', 'memories'],
   });
 

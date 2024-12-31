@@ -27,8 +27,20 @@
       "favicon": "./src/assets/image/journalizer-icon.png"
     },
     "plugins": [
-      "expo-font",
-      "expo-sqlite"
+      [
+      "expo-font"
+      ],
+      [
+        "expo-sqlite"
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./src/assets/image/journalizer-splash-screen-4.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ddd7e2"
+        }
+      ]
     ]
   }
 }

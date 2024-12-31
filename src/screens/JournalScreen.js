@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ImageBackground, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ImageBackground, FlatList, StyleSheet, TouchableOpacity} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import BackgroundImage from '../assets/image/journalizer-background-2.png';
 
@@ -24,14 +24,19 @@ export default function JournalScreen({ navigation }) {
     const updatedEntries = await readJournalEntries();
     setJournalEntries(updatedEntries);
   };
-  console.log("UPDATED ENTRIES", journalEntries);
+
+  // Sort the journal entires according to date
+  const sortedJournalEntries = [...journalEntries].sort(
+    (a, b) => new Date(b.date) - new Date(a.date)
+  );
+
   return (
     <ImageBackground source={BackgroundImage} style={styles.backgroundImage}>
       <Text style={styles.headerText}>Your Journal Entries</Text>
       {/* FlatList with ListHeaderComponent */}
       <FlatList
         contentContainerStyle={styles.scrollContainer}
-        data={journalEntries}
+        data={sortedJournalEntries}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity 
@@ -63,8 +68,7 @@ export default function JournalScreen({ navigation }) {
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
-    resizeMode: 'cover',
-    justifyContent: 'center',
+    resizeMode: 'contain',
   },
   scrollContainer: {
     paddingHorizontal: 20,
@@ -112,16 +116,3 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 });
-
-/*
-ListHeaderComponent={() => (
-          <View style={styles.scrollContainer}>
-            
-            {Array.from({ length: 2 }).map((_, index) => (
-              <View key={index} style={styles.entry}>
-                <Text style={styles.entryText}>Dummy Journal Entry #{index + 1}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-*/
