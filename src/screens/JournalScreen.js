@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ImageBackground, FlatList, StyleSheet, TouchableOpacity} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import BackgroundImage from '../assets/image/journalizer-background-2.png';
+import { formatYearMonthDay, formatYear } from '../utils/dataUtils';
 
 // Database
 import { readJournalEntries, deleteJournalEntry } from '../services/journalDB';
@@ -46,7 +47,7 @@ export default function JournalScreen({ navigation }) {
             >
             <Text style={styles.entryTextTitle}>{item.title}</Text>
             <Text style={styles.entryText}>{item.body}</Text>
-            <Text style={styles.entryText}>{item.date}</Text> 
+            <Text style={styles.entryText}>{formatYearMonthDay(item.date)}</Text> 
           </TouchableOpacity>
         )}
         

@@ -49,7 +49,7 @@ export const createJournalEntry = async ({ date, title, body, tags }) => {
 export const readJournalEntries = async () => {
   const db = await getDBInstance();
   const allRows = await db.getAllAsync(`SELECT * FROM journal_entries`);
-  console.log('All journal entries:', allRows);
+  //console.log('All journal entries:', allRows);
   return allRows;
 };
 
@@ -92,7 +92,7 @@ export const deleteJournalEntry = async (id) => {
 
   // Read entries
   const entries = await readJournalEntries();
-  console.log(entries);
+  //console.log(entries);
 
   // Update the entry
   await updateJournalEntry(db, {
@@ -108,5 +108,5 @@ export const deleteJournalEntry = async (id) => {
 
   // Verify deletion
   const updatedEntries = await readJournalEntries();
-  console.log(updatedEntries);
+  //console.log(updatedEntries);
 })();
