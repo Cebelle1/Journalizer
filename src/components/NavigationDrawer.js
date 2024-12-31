@@ -66,11 +66,8 @@ export default function NavigationDrawer({ navigation }) {
 
             {/* Footer */}
             <View style={styles.footer}>
-                <Avatar.Image
-                size={30}
-                source={{ uri: 'https://randomuser.me/api/portraits/women/45.jpg' }}
-                />
-                <MatCommIcon name="bell-outline" size={24} color="#fff" />
+                <IonicIcon name="log-out-outline" size={24} color="#000" />
+                <MatCommIcon name="bell-outline" size={24} color="#000" />
             </View>
         </View>
     );

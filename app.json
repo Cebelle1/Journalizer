@@ -13,7 +13,8 @@
       "backgroundColor": "#ddd7e2"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.Journalizer"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +27,8 @@
       "favicon": "./src/assets/image/journalizer-icon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-sqlite"
     ]
   }
 }

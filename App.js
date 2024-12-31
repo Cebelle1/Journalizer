@@ -4,8 +4,9 @@ import NavigationDrawer from './src/components/NavigationDrawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { loadFonts } from './src/styles/Font.js';
-import { TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import * as SplashScreen from 'expo-splash-screen';
 
 // Screens
 import JournalScreen from './src/screens/JournalScreen.js';
@@ -13,13 +14,19 @@ import CloudSyncScreen from './src/screens/CloudSyncScreen.js';
 import SettingsScreen from './src/screens/SettingsScreen.js';
 import CreateJournalEntryScreen from './src/screens/CreateJournalEntryScreen.js';
 
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({
+  duration: 1000,
+  fade: true,
+});
+
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isCreatingEntry, setIsCreatingEntry] = useState(false); // Track Create Journal Entry screen to hide Drawer Header
-  const [isViewingEntry, setIsViewingEntry] = useState(false); // Track View Journal Entry screen to show Search Icon
 
   useEffect(() => {
     const loadResources = async () => {
@@ -28,6 +35,13 @@ export default function App() {
     };
     loadResources();
   }, []);
+
+   // Once resources are loaded, hide the splash screen
+   useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return null;
@@ -38,13 +52,16 @@ export default function App() {
       <Drawer.Navigator
         initialRouteName="Journals"
         drawerContent={(props) => <NavigationDrawer {...props} />}
+        screenOptions={{
+          headerTitleStyle: drawerStyles.headerTitleStyle,
+         }}
       >
         <Drawer.Screen 
           name="Journals" 
           options={{ 
             headerShown: !isCreatingEntry,    // Hide header if creating entry
             headerRight: () => (
-              isViewingEntry && (
+              !isCreatingEntry && (
                 <TouchableOpacity style={{ marginRight: 15 }}>
                   <Ionicons name="search" size={24} color="black" />
                 </TouchableOpacity>
@@ -54,9 +71,7 @@ export default function App() {
         >
           {() => (
             <JournalStack 
-              setIsCreatingEntry={setIsCreatingEntry}   
-              setIsViewingEntry={setIsViewingEntry}
-              isViewingEntry={isViewingEntry}
+              setIsCreatingEntry={setIsCreatingEntry}
             />
           )}
         </Drawer.Screen>
@@ -67,9 +82,13 @@ export default function App() {
   );
 }
 
-const JournalStack = ({ setIsCreatingEntry, setIsViewingEntry, isViewingEntry }) => {
+const JournalStack = ({ setIsCreatingEntry}) => {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      initialRouteName="JournalScreen"
+      screenOptions={{
+        headerTitleStyle: stackStyles.headerTitleStyle,
+      }}>
       <Stack.Screen
         name="JournalScreen"
         component={JournalScreen}
@@ -77,10 +96,8 @@ const JournalStack = ({ setIsCreatingEntry, setIsViewingEntry, isViewingEntry })
         listeners={{
           focus: () => {
             setIsCreatingEntry(false) // Show Drawer Header
-            setIsViewingEntry(true)   // Show Search Icon
           },
           blur: () => {
-            setIsViewingEntry(false)  // Reset to false when blurred
             setIsCreatingEntry(true)  // Reset to true when blurred
           }
         }}
@@ -91,11 +108,9 @@ const JournalStack = ({ setIsCreatingEntry, setIsViewingEntry, isViewingEntry })
         listeners={{
           focus: () => {
             setIsCreatingEntry(true)  // Hide Drawer Header
-            setIsViewingEntry(false)  // Hide Search Icon
           },
           blur: () => {
             setIsCreatingEntry(false) // Reset to false when blurred
-            setIsViewingEntry(true)   // Reset to true when blurred
           }, 
         }}
         options={{ headerShown: true }} // Show Stack header for Create Journal Entry
@@ -103,3 +118,11 @@ const JournalStack = ({ setIsCreatingEntry, setIsViewingEntry, isViewingEntry })
     </Stack.Navigator>
   );
 };
+
+const drawerStyles = StyleSheet.create({
+  headerTitleStyle: {fontFamily: 'Montserrat-Bold'},
+});
+
+const stackStyles = StyleSheet.create({
+  headerTitleStyle: {fontFamily: 'Montserrat-Bold'},
+});
