@@ -5,7 +5,7 @@ import BackgroundImage from '../assets/image/journalizer-background-2.png';
 import { formatYearMonthDay, formatYear } from '../utils/dataUtils';
 
 // Database
-import { readJournalEntries, deleteJournalEntry } from '../services/journalDB';
+import { readJournalEntry, readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
 
 export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
@@ -13,7 +13,7 @@ export default function JournalScreen({ navigation }) {
   // Load all journal entries from the database
   useEffect(() => {
     const loadEntries = async () => {
-      const entries = await readJournalEntries();
+      const entries = await readAllJournalEntries();
       setJournalEntries(entries);
     };
     loadEntries();
@@ -22,7 +22,7 @@ export default function JournalScreen({ navigation }) {
   // Delete a journal entry using id
   const deleteJournalEntry = async (id) => {
     await deleteJournalEntry(id);
-    const updatedEntries = await readJournalEntries();
+    const updatedEntries = await readAllJournalEntries();
     setJournalEntries(updatedEntries);
   };
 
@@ -43,7 +43,7 @@ export default function JournalScreen({ navigation }) {
           <TouchableOpacity 
             key={item.id}
             style={styles.entry} 
-            onPress={() => navigation.navigate('JournalEntry', { id: item.id })}
+            onPress={() => navigation.navigate('JournalEntry', { id: item.id })}  // Pass id to update entry
             >
             <Text style={styles.entryTextTitle}>{item.title}</Text>
             <Text style={styles.entryText}>{item.body}</Text>
@@ -57,7 +57,7 @@ export default function JournalScreen({ navigation }) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
-          navigation.navigate('Create Journal Entry'); // Stack nav to CreateJournalEntryScreen
+          navigation.navigate('JournalEntry'); // Stack nav to JournalEntryScreen
         }}
       >
         <Ionicons name="add" size={32} color="#ffffff" />

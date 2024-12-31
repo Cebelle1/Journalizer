@@ -46,12 +46,19 @@ export const createJournalEntry = async ({ date, title, body, tags }) => {
 };
 
 // Read all journal entries
-export const readJournalEntries = async () => {
+export const readAllJournalEntries = async () => {
   const db = await getDBInstance();
   const allRows = await db.getAllAsync(`SELECT * FROM journal_entries`);
   //console.log('All journal entries:', allRows);
   return allRows;
 };
+
+// Read a single journal entry
+export const readJournalEntry = async (id) => {
+  const db = await getDBInstance();
+  const result = await db.getFirstAsync(`SELECT * FROM journal_entries WHERE id = ?`, id);
+  return result;
+}
 
 // Update a journal entry
 export const updateJournalEntry = async ({ id, date, title, body, tags }) => {
@@ -91,7 +98,7 @@ export const deleteJournalEntry = async (id) => {
   });
 
   // Read entries
-  const entries = await readJournalEntries();
+  const entries = await readAllJournalEntries();
   //console.log(entries);
 
   // Update the entry
@@ -107,6 +114,6 @@ export const deleteJournalEntry = async (id) => {
   //await deleteJournalEntry( newEntryId);
 
   // Verify deletion
-  const updatedEntries = await readJournalEntries();
-  //console.log(updatedEntries);
+  const updatedEntries = await readAllJournalEntries();
+  console.log(updatedEntries);
 })();

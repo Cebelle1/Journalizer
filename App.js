@@ -12,7 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import JournalScreen from './src/screens/JournalScreen.js';
 import CloudSyncScreen from './src/screens/CloudSyncScreen.js';
 import SettingsScreen from './src/screens/SettingsScreen.js';
-import CreateJournalEntryScreen from './src/screens/CreateJournalEntryScreen.js';
+import JournalEntryScreen from './src/screens/JournalEntryScreen.js';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -103,8 +103,8 @@ const JournalStack = ({ setIsCreatingEntry}) => {
         }}
       />
       <Stack.Screen
-        name="Create Journal Entry"
-        component={CreateJournalEntryScreen}
+        name="JournalEntry"
+        component={JournalEntryScreen}
         listeners={{
           focus: () => {
             setIsCreatingEntry(true)  // Hide Drawer Header

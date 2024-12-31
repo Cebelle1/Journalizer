@@ -1,29 +1,58 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Dimensions } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { createJournalEntry } from '../services/journalDB';
+import { readJournalEntry, updateJournalEntry, createJournalEntry } from '../services/journalDB';
 import BackgroundImage from '../assets/image/journalizer-background-1.png';
 
 // Used to prevent the keyboard from shifting the background image
 const d = Dimensions.get('window');
 
-export default function CreateJournalEntryScreen({ navigation }){
+export default function JournalEntryScreen({ navigation, route }){
   const [date, setDate] = useState(new Date());
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const entryId  = route.params.id || {}; //Get entryId if its updating an existing entry
+
+  // Load existing entry if entryId is provided
+  useEffect(() => {
+    if (entryId) {
+      const loadEntry = async () => {
+        // Load the entry from the database
+        const entry = await readJournalEntry(entryId);
+        console.log('Loaded entry:', entry);
+        if (entry) {
+          setDate(new Date(entry.date));
+          setTitle(entry.title);
+          setBody(entry.body);
+          
+        }
+      };
+      loadEntry();
+    }
+  }, [entryId]);
 
   const onSave = async() => {
     try {
-      const newEntryId = await createJournalEntry({
+
+      if (entryId) {
+        // Update the existing entry
+        await updateJournalEntry({
+          id: entryId,
+          date: date.toISOString(),
+          title: title,
+          body: body,
+          tags: tags
+        });
+      } else {
+       await createJournalEntry({
         date: date.toISOString(),
         title: title,
         body: body,
         tags: tags,
       });
-
-      console.log('New journal entry ID:', newEntryId);
+    }
       navigation.navigate('JournalScreen');
     } catch (error) {
       console.error('Failed to save journal entry:', error);
