@@ -75,6 +75,7 @@ export default function App() {
           {() => (
             <JournalStack 
               setIsCreatingEntry={setIsCreatingEntry}
+              isCreatingEntry={isCreatingEntry}
             />
           )}
         </Drawer.Screen>
@@ -85,7 +86,7 @@ export default function App() {
   );
 }
 
-const JournalStack = ({ setIsCreatingEntry}) => {
+const JournalStack = ({ setIsCreatingEntry, isCreatingEntry}) => {
   return (
     <Stack.Navigator
       initialRouteName="JournalScreen"
@@ -117,7 +118,10 @@ const JournalStack = ({ setIsCreatingEntry}) => {
             setIsCreatingEntry(false) // Reset to false when blurred
           }, 
         }}
-        options={{ headerShown: true }} // Show Stack header for Create Journal Entry
+        options={{ 
+          headerShown: true,
+          
+        }} 
       />
     </Stack.Navigator>
   );

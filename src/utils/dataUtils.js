@@ -7,3 +7,7 @@ export const formatYearMonthDay = (date) => {
 export const formatYear = (date) => {
     return format(new Date(date), 'yyyy');
 }
+
+export const formatDateString = (date) => {
+    return format(new Date(date), 'MMMM dd, yyyy');
+}

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Dimensions } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Dimensions, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { readJournalEntry, updateJournalEntry, createJournalEntry } from '../services/journalDB';
 import BackgroundImage from '../assets/image/journalizer-background-1.png';
 import { themeStyle } from '../styles/theme';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Used to prevent the keyboard from shifting the background image
 const d = Dimensions.get('window');
@@ -14,30 +15,34 @@ export default function JournalEntryScreen({ navigation, route }){
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const entryId  = route.params?.id ?? {}; //Get entryId if its updating an existing entry
+  const entryId  = route.params?.id ?? null; //Get entryId if its updating an existing entry
+  const [loading, setLoading] = useState(true);
 
   // Load existing entry if entryId is provided
   useEffect(() => {
     if (entryId) {
       const loadEntry = async () => {
         // Load the entry from the database
+        setLoading(true);
         const entry = await readJournalEntry(entryId);
-        console.log('Loaded entry:', entry);
+        //console.log('Loaded entry:', entry);
         if (entry) {
           setDate(new Date(entry.date));
           setTitle(entry.title);
           setBody(entry.body);
-          
         }
+        
       };
       loadEntry();
     }
+    setLoading(false);
   }, [entryId]);
 
   const onSave = async() => {
     try {
-
+      //console.log('Entry ID:', entryId);
       if (entryId) {
+        console.log('Entry ID:', entryId);
         // Update the existing entry
         await updateJournalEntry({
           id: entryId,
@@ -60,13 +65,33 @@ export default function JournalEntryScreen({ navigation, route }){
     }
   };
 
-  return (
-    
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={onSave} style={{ marginRight: 15 }}>
+          <Ionicons name="save-outline" size={24} color="black" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, onSave]);
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
+
+  return (  
     <ImageBackground source={BackgroundImage} style={styles.backgroundImage}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        flexGrow={1}
+        keyboardShouldPersistTaps="handled">
           {/* Date Text that expands to Date Picker */}
         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-          <Text style={styles.dateText}>{date.toDateString()}</Text>
+          <View style={styles.dateContainer}>  
+            <Ionicons name="calendar" size={20} style={styles.dateIcon} />
+            <Text style={styles.dateText}>{date.toDateString()}</Text>
+          </View>
+          
         </TouchableOpacity>
         {showDatePicker && (
           <DateTimePicker
@@ -84,6 +109,8 @@ export default function JournalEntryScreen({ navigation, route }){
           placeholder="Title"
           style={[styles.input, styles.titleInput]}
           value={title}
+          multiline
+          numberOfLines={2}
           onChangeText={setTitle}
         />
         <TextInput
@@ -93,45 +120,42 @@ export default function JournalEntryScreen({ navigation, route }){
           value={body}
           onChangeText={setBody}
         />
-        <TouchableOpacity
-          style={styles.tagButton}
-          onPress={() => {
-            const newTag = prompt('Enter a tag:');
-            if (newTag) setTags([...tags, newTag]);
-          }}
-        >
-          <Text style={styles.tagButtonText}>Add Tag prolly gonna change this</Text>
 
-        </TouchableOpacity>
-        <View style={styles.tagsContainer}>
-          {tags.map((tag, index) => (
-            <Text key={index} style={styles.tag}>
-              {tag}
-            </Text>
-          ))}
-        </View>
-        <TouchableOpacity 
-          style={styles.saveButton} 
-          onPress={onSave}>
-          <Text style={styles.saveButton}>Save</Text>
-        </TouchableOpacity>
-
+        
       </ScrollView>
+
+      {/* Floating Save Button */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={onSave}>
+        <Text style={styles.fabText}>Shift to top right</Text>
+      </TouchableOpacity>
     </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   keyboardAvWContainer: { flex: 1 },
-  container: { padding: 20 },
+  container: { 
+    padding: 20,
+    flexGrow: 1,
+    paddingBottom: 100, // Add bottom padding so the save button doesn't overlap with the keyboard
+   },
+  dateContainer: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+  },
+  dateIcon: {
+    marginRight: 5,
+    marginBottom: 10,
+    padding: 5,
+    color: themeStyle.darkPurple1,
+  },
   dateText: { 
     fontSize: 20, 
     fontFamily: 'Montserrat-Bold',
-    marginBottom: 20,
-    borderWidth: 1,
-    padding: 5,
-    borderRadius: 5,
-    backgroundColor: themeStyle.lightPurpleTint,
+    marginBottom: 10,
+    color: themeStyle.black,
   },
   input: { 
     borderWidth: 1, 
@@ -140,14 +164,18 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: themeStyle.lightPurpleTint,
     opacity: 0.9,
-    textAlignVertical: 'top'
+    textAlignVertical: 'top',
     },
   titleInput: { 
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: 'GenBasB',
+    padding: 5,
+    marginBottom: 10,
    },
   bodyInput: { 
-    height: 200,
+    flex: 1,
+    flexGrow: 1,
+    height: '30%',    // Flexible height
     fontFamily: 'GenBasR',
     fontSize: 18,
   },
@@ -169,15 +197,28 @@ const styles = StyleSheet.create({
     padding: 5, 
     borderRadius: 5 
     },
-  saveButton: { 
+  fab: { 
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: themeStyle.darkPurple1, 
+    borderRadius: 25, 
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    elevation: 5, // Add a shadow for Android
+    shadowColor: '#000', // Add shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  fabText: { 
     color: themeStyle.white, 
     fontFamily: 'Montserrat-Bold',
-    fontSize: 16,
-    padding: 5,
-    textAlign: 'center', 
-    borderRadius: 5, 
-    },
+    fontSize: 18,
+    textAlign: 'center',
+  },
   backgroundImage: {        // Absolute position to prevent keyboard from shifting the background image
     position: 'absolute',
     flex: 1,

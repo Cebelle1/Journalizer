@@ -86,6 +86,14 @@ export const deleteJournalEntry = async (id) => {
   return result.changes;
 };
 
+// FOR TESTING PURPOSES ONLY
+const clearDataBase = async () => {
+  const db = await getDBInstance();
+  await db.runAsync(`DELETE FROM journal_entries`);
+};
+
+// clearDtaBase();
+
 // =============Test
 /*
 (async () => {
