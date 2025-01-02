@@ -92,3 +92,23 @@ export const GradientTextTB = ({ text, gradientColors, style, fontFamily }) => (
       </SvgText>
     </Svg>
   );
+
+
+  export const HighlightedText = ({ text, innerFillColor, outerHighlightColor, fontSize = 40}) => {
+    return (
+      <Svg style={{marginBottom: 10}}>
+        <SvgText
+          x="0%"
+          y="50%"
+          alignmentBaseline="middle"
+          fontSize={fontSize}
+          fontFamily="Montserrat-Bold"
+          fill={innerFillColor} // Inner fill color
+          stroke={outerHighlightColor} // Outline color
+          strokeWidth="1" // Outline thickness
+        >
+          {text}
+        </SvgText>
+      </Svg>
+    );
+  };

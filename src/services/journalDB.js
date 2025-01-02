@@ -92,7 +92,7 @@ const clearDataBase = async () => {
   await db.runAsync(`DELETE FROM journal_entries`);
 };
 
-// clearDtaBase();
+//clearDataBase();
 
 // =============Test
 /*

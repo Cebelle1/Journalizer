@@ -86,7 +86,7 @@ export default function App() {
   );
 }
 
-const JournalStack = ({ setIsCreatingEntry, isCreatingEntry}) => {
+const JournalStack = ({ setIsCreatingEntry }) => {
   return (
     <Stack.Navigator
       initialRouteName="JournalScreen"

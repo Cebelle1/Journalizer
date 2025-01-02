@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import BackgroundImage from '../assets/image/journalizer-background-2.png';
+import LibraryBG from '../assets/image/library-background-2.png';
 import { formatYearMonthDay } from '../utils/dataUtils';
 import { themeStyle } from '../styles/theme';
 
@@ -22,16 +22,34 @@ export default function JournalScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [longPressedItem, setLongPressedItem] = useState(null); // Tracks long-pressed item ID
 
-
-
   // Load all journal entries from the database
   useEffect(() => {
     const loadEntries = async () => {
       setLoading(true);
       try {
         const entries = await readAllJournalEntries();
-        const sortedEntries = entries.sort((a, b) => new Date(b.date) - new Date(a.date));
-        setJournalEntries(sortedEntries);
+        //const sortedEntries = entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Group entries by year
+        const groupedEntries = entries.reduce((acc, entry) => {
+          const year = new Date(entry.date).getFullYear();
+          if (!acc[year]) {
+            acc[year] = [];
+          }
+          acc[year].push(entry);
+          return acc;
+        }, {});
+        
+        console.log(groupedEntries);
+        // Convert grouped entries into an array format for FlatList
+        const groupedEntriesArray = Object.keys(groupedEntries).sort((a, b) => b - a).map((year) => ({
+          year,
+          entries: groupedEntries[year],
+        }));
+
+        console.log(groupedEntriesArray);
+
+        setJournalEntries(groupedEntriesArray);
       } catch (error) {
         console.error('Failed to load journal entries:', error);
       } finally {
@@ -58,7 +76,12 @@ export default function JournalScreen({ navigation }) {
   const deleteSelectedJournalEntry = async (id) => {
     await deleteJournalEntry(id);
     // Manually update the state to remove the deleted entry instead of fetching the API again
-    setJournalEntries((prevEntries) => prevEntries.filter((entry) => entry.id !== id));
+    setJournalEntries((prevEntries) => {
+      return prevEntries.map((yearGroup) => ({
+        ...yearGroup,
+        entries: yearGroup.entries.filter((entry) => entry.id !== id),
+      }));
+    });
   };
 
   const handleDeletePress = (id) => {
@@ -66,7 +89,7 @@ export default function JournalScreen({ navigation }) {
       'Delete Entry',
       'Are you sure you want to delete this entry?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => { setLongPressedItem(null); } },
         {
           text: 'Delete',
           onPress: () => {
@@ -80,45 +103,44 @@ export default function JournalScreen({ navigation }) {
   };
 
   const renderItem = ({ item }) => {
-    const isItemLongPressed = longPressedItem === item.id;
+    if (item.year) {
+      {/* Year Divider */}
+      return (
+        <Text style={styles.yearDivider}>{item.year}</Text>
+      );
+    }
+
+    const entry = item; // Individual journal entry
+    const isItemLongPressed = longPressedItem === entry.id;
+
+    {/* Delete Journal Entry long press logic*/}
     return (
       <TouchableOpacity
-        key={item.id}
-        style={[
-          styles.entry,
-          isItemLongPressed && styles.longPressedEntry, // Change style on long press
-        ]}
-        onLongPress={() => setLongPressedItem(item.id)} // Set the long-pressed item
+        key={entry.id}
+        style={[styles.entry, isItemLongPressed && styles.longPressedEntry]} 
+        onLongPress={() => setLongPressedItem(entry.id)} // Set long-pressed item
         onPress={() => {
-          if (longPressedItem && longPressedItem === item.id) {
-            // Allow delete when pressed on the red area
-            handleDeletePress(item.id);
-          } else if (longPressedItem && longPressedItem !== item.id) {
-            // Reset long press state when another item is pressed
-            setLongPressedItem(null);
-
+          if (longPressedItem && longPressedItem === entry.id) {
+            handleDeletePress(entry.id); // Delete on long press
+          } else if (longPressedItem && longPressedItem !== entry.id) {
+            setLongPressedItem(null); // Reset long press state
           } else {
-            navigation.navigate('Journal Entry', { id: item.id });
+            navigation.navigate('Journal Entry', { id: entry.id });
           }
         }}
       >
         {isItemLongPressed ? (
-          <Ionicons
-            name="trash-outline"
-            size={24}
-            color="white"
-            onPress={() => handleDeletePress(item.id)}
-          />
+          <Ionicons name="trash-outline" size={24} color="white" onPress={() => handleDeletePress(entry.id)} />
         ) : (
           <View>
             <View style={styles.entryTextContainer}>
               <Text style={styles.entryTextTitle} numberOfLines={1}>
-                {item.title}
+                {entry.title}
               </Text>
-              <Text style={styles.entryTextDate}>{formatYearMonthDay(item.date)}</Text>
+              <Text style={styles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
             </View>
             <Text style={styles.entryText} numberOfLines={6}>
-              {item.body}
+              {entry.body}
             </Text>
           </View>
         )}
@@ -126,24 +148,25 @@ export default function JournalScreen({ navigation }) {
     );
   };
 
-  // Return must be after the useEffect functions
   if (loading) {
     return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
   return (
-    <ImageBackground source={BackgroundImage} style={styles.backgroundImage}>
-      <Text style={styles.headerText}>Your Journal Entries</Text>
+    <ImageBackground source={LibraryBG} style={styles.backgroundImage}>
+      
       <FlatList
         contentContainerStyle={styles.scrollContainer}
-        data={journalEntries}
+        data={journalEntries.flatMap((yearGroup) => [
+          { year: yearGroup.year, id: yearGroup.year }, // Year Divider
+          ...yearGroup.entries,                         // Insert entries under the year
+        ])}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
       />
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('Journal Entry')}
-      >
+
+      {/* Floating + Button to create Journal */}
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Journal Entry')}>
         <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
     </ImageBackground>
@@ -163,7 +186,21 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'Montserrat-Bold',
     marginVertical: 20,
-    color: themeStyle.darkPurple4,
+    color: themeStyle.white,
+    textAlign: 'center',
+  },
+  yearDividerContainer: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: themeStyle.white,
+    padding: 5,
+    alignSelf: 'center',
+  },
+  yearDivider: {
+    fontSize: 30,
+    color: themeStyle.white,
+    fontFamily: 'Montserrat-Bold',
+    paddingVertical: 5,
     textAlign: 'center',
   },
   entry: {

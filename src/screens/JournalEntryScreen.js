@@ -3,6 +3,8 @@ import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { readJournalEntry, updateJournalEntry, createJournalEntry } from '../services/journalDB';
 import BackgroundImage from '../assets/image/journalizer-background-1.png';
+import LibraryBG from '../assets/image/library-background-6.png';
+import TagModal from '../components/TagModal';
 import { themeStyle } from '../styles/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -14,9 +16,21 @@ export default function JournalEntryScreen({ navigation, route }){
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
+  const [tagModalVisible, setTagModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const entryId  = route.params?.id ?? null; //Get entryId if its updating an existing entry
   const [loading, setLoading] = useState(true);
+
+  // Load the save icon in header
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={onSave} style={{ marginRight: 15 }}>
+          <Ionicons name="save-outline" size={24} color="black" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, onSave, body, title, tags, date]);  // onSave does not receive the latest state values without this dependency array
 
   // Load existing entry if entryId is provided
   useEffect(() => {
@@ -30,6 +44,7 @@ export default function JournalEntryScreen({ navigation, route }){
           setDate(new Date(entry.date));
           setTitle(entry.title);
           setBody(entry.body);
+          setTags(JSON.parse(entry.tags));
         }
         
       };
@@ -38,11 +53,10 @@ export default function JournalEntryScreen({ navigation, route }){
     setLoading(false);
   }, [entryId]);
 
+  // When Save Icon is pressed
   const onSave = async() => {
     try {
-      //console.log('Entry ID:', entryId);
       if (entryId) {
-        console.log('Entry ID:', entryId);
         // Update the existing entry
         await updateJournalEntry({
           id: entryId,
@@ -52,6 +66,11 @@ export default function JournalEntryScreen({ navigation, route }){
           tags: tags
         });
       } else {
+        // Check if body is empty
+        if (body.trim() === '') {
+          alert('Please enter a journal entry');
+          return;
+        }
        await createJournalEntry({
         date: date.toISOString(),
         title: title,
@@ -65,26 +84,30 @@ export default function JournalEntryScreen({ navigation, route }){
     }
   };
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={onSave} style={{ marginRight: 15 }}>
-          <Ionicons name="save-outline" size={24} color="black" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, onSave]);
+  const addTag = (tag) => {
+    if (tag.trim() !== '') {
+      setTags(prevTags => {
+        if (!prevTags.includes(tag)) {
+          return [...prevTags, tag];
+        }
+        const newTags = [...prevTags, tag.trim()];
+        return newTags;
+      });
+    }
+    setTagModalVisible(false);
+  };
 
   if (loading) {
     return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
   return (  
-    <ImageBackground source={BackgroundImage} style={styles.backgroundImage}>
+    <ImageBackground source={LibraryBG} style={styles.backgroundImage}>
       <ScrollView 
         contentContainerStyle={styles.container}
         flexGrow={1}
         keyboardShouldPersistTaps="handled">
+
           {/* Date Text that expands to Date Picker */}
         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
           <View style={styles.dateContainer}>  
@@ -105,14 +128,38 @@ export default function JournalEntryScreen({ navigation, route }){
           />
         )}
 
+        {/* Tag Picker */}
+        <TouchableOpacity onPress={() => setTagModalVisible(true)}>
+          <View style={styles.tagsContainer}>
+            <Ionicons name="pricetag-outline" size={20} style={styles.tagIcon} />
+            {/** Display individual tags */}
+            {tags.map((tag, index) => (
+              <View key={index} style={[styles.tag, styles.tagBorder]}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        </TouchableOpacity>
+
+        {/* Tag Modal */}
+        <TagModal
+          visible={tagModalVisible}
+          onClose={() => setTagModalVisible(false)}
+          onAddTag={(addTag)}
+          tags={tags}
+        />
+        
+        {/* Title Inputs */}
         <TextInput
-          placeholder="Title"
+          placeholder="Title [Optional]"
           style={[styles.input, styles.titleInput]}
           value={title}
           multiline
           numberOfLines={2}
           onChangeText={setTitle}
         />
+
+        {/* Body Input */}
         <TextInput
           placeholder="Write your journal..."
           style={[styles.input, styles.bodyInput]}
@@ -120,16 +167,7 @@ export default function JournalEntryScreen({ navigation, route }){
           value={body}
           onChangeText={setBody}
         />
-
-        
       </ScrollView>
-
-      {/* Floating Save Button */}
-      <TouchableOpacity 
-        style={styles.fab} 
-        onPress={onSave}>
-        <Text style={styles.fabText}>Shift to top right</Text>
-      </TouchableOpacity>
     </ImageBackground>
   );
 };
@@ -144,26 +182,51 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: 'row', 
     alignItems: 'center', 
+    marginBottom: 5,
   },
   dateIcon: {
     marginRight: 5,
-    marginBottom: 10,
     padding: 5,
-    color: themeStyle.darkPurple1,
+    color: themeStyle.white,
   },
   dateText: { 
     fontSize: 20, 
     fontFamily: 'Montserrat-Bold',
+    color: themeStyle.white,
+  },
+  tagsContainer: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
     marginBottom: 10,
+    },
+  tagIcon: {
+    marginRight: 5,
+    padding: 5,
+    color: themeStyle.white,
+  },
+  tagText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
     color: themeStyle.black,
+  },
+  tag: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    margin: 3,
+  },
+  tagBorder: {
+    borderWidth: 1,
+    backgroundColor: themeStyle.white,
+    borderColor: themeStyle.white,
+    borderRadius: 20,
+    opacity: 0.7, 
   },
   input: { 
     borderWidth: 1, 
     padding: 10, 
-    marginBottom: 20, 
+    marginBottom: 10, 
     borderRadius: 5,
     backgroundColor: themeStyle.lightPurpleTint,
-    opacity: 0.9,
     textAlignVertical: 'top',
     },
   titleInput: { 
@@ -179,24 +242,6 @@ const styles = StyleSheet.create({
     fontFamily: 'GenBasR',
     fontSize: 18,
   },
-  tagButton: { 
-    backgroundColor: themeStyle.white, 
-    padding: 10, 
-    borderRadius: 5, 
-    alignItems: 'center' 
-    },
-  tagButtonText: { fontSize: 16 },
-  tagsContainer: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    marginBottom: 20 
-    },
-  tag: { 
-    backgroundColor: '#e0e0e0', 
-    margin: 5, 
-    padding: 5, 
-    borderRadius: 5 
-    },
   fab: { 
     position: 'absolute',
     bottom: 100,
