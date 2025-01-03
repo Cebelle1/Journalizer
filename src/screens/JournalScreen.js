@@ -13,6 +13,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import LibraryBG from '../assets/image/library-background-2.png';
 import { formatTime, formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
 import { themeStyle } from '../styles/theme';
+import Tags from '../components/Tags';
+import { tagStylesJournalScreen } from '../styles/componentStyle';
 
 // Database
 import { readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
@@ -143,6 +145,9 @@ export default function JournalScreen({ navigation }) {
 
             {/* Tags and time*/}
             <View style={styles.entryTextContainer}>
+              <Tags 
+                tags={JSON.parse(entry.tags)}
+                style={tagStylesJournalScreen} />
             </View>
             
             <Text style={styles.entryText} numberOfLines={6}>

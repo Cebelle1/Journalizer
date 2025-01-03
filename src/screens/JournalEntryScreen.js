@@ -6,8 +6,8 @@ import BackgroundImage from '../assets/image/journalizer-background-1.png';
 import LibraryBG from '../assets/image/library-background-6.png';
 import TagModal from '../components/TagModal';
 import { themeStyle } from '../styles/theme';
-import { tagStyles } from '../styles/componentStyle';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Tags from '../components/Tags';
 
 // Used to prevent the keyboard from shifting the background image
 const d = Dimensions.get('window');
@@ -139,15 +139,8 @@ export default function JournalEntryScreen({ navigation, route }){
 
         {/* Tag Picker */}
         <TouchableOpacity onPress={() => setTagModalVisible(true)}>
-          <View style={tagStyles.tagsContainer}>
-            <Ionicons name="pricetag-outline" size={20} style={tagStyles.tagIcon} />
-            {/** Display individual tags */}
-            {tags.map((tag, index) => (
-              <View key={index} style={tagStyles.tagBorder}>
-                <Text style={tagStyles.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
+          {/* Display individual tags */}
+          <Tags tags={tags} />
         </TouchableOpacity>
 
         {/* Tag Modal */}

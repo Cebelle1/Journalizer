@@ -5,6 +5,7 @@ export const tagStyles = StyleSheet.create({
   tagIcon: {
     marginRight: 5,
     color: themeStyle.white,
+    size: 20,
   },
   tagsContainer: { 
     flexDirection: 'row', 
@@ -36,3 +37,22 @@ export const tagStyles = StyleSheet.create({
     },
 });
 
+
+export const tagStylesJournalScreen = StyleSheet.create({
+  tagText: {
+    fontSize: 13,
+  },
+  tagIcon:{
+    color: themeStyle.black,
+    size: 16,
+  },
+  tagBorder: {
+    paddingHorizontal: 5,
+    margin: 1,
+    borderWidth: 1,
+    backgroundColor: themeStyle.lightGrey1,
+    borderColor: themeStyle.darkGrey1,
+    borderRadius: 20,
+    opacity: 0.7,
+  },
+});
