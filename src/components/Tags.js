@@ -15,7 +15,7 @@ export default function Tags({ tags , style}){
         {/** Display individual tags */}
         {tags.map((tag, index) => (
           <View key={index} style={[tagStyles.tagBorder, style?.tagBorder]}>
-          <Text style={[tagStyles.tagText, style?.tagText]}>{tag}</Text>
+            <Text style={[tagStyles.tagText, style?.tagText]}>{tag}</Text>
           </View>
         ))}
       </View>

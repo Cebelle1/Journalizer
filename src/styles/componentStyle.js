@@ -11,6 +11,7 @@ export const tagStyles = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center',
     marginBottom: 5,
+    flexWrap: 'wrap',
     },
   tagBorder: {
     paddingHorizontal: 8,
