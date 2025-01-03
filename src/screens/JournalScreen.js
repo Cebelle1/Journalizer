@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LibraryBG from '../assets/image/library-background-2.png';
-import { formatYearMonthDay } from '../utils/dataUtils';
+import { formatTime, formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
 import { themeStyle } from '../styles/theme';
 
 // Database
@@ -84,16 +84,16 @@ export default function JournalScreen({ navigation }) {
     });
   };
 
-  const handleDeletePress = (id) => {
+  const handleDeletePress = (entry) => {
     Alert.alert(
       'Delete Entry',
-      'Are you sure you want to delete this entry?',
+      'Are you sure you want to delete this entry? \n Title: ' + entry.title + '\n Date: ' + formatYearMonthDayTime(entry.date),
       [
         { text: 'Cancel', style: 'cancel', onPress: () => { setLongPressedItem(null); } },
         {
           text: 'Delete',
           onPress: () => {
-            deleteSelectedJournalEntry(id);
+            deleteSelectedJournalEntry(entry.id);
             setLongPressedItem(null); // Reset long press state
           },
         },
@@ -121,7 +121,7 @@ export default function JournalScreen({ navigation }) {
         onLongPress={() => setLongPressedItem(entry.id)} // Set long-pressed item
         onPress={() => {
           if (longPressedItem && longPressedItem === entry.id) {
-            handleDeletePress(entry.id); // Delete on long press
+            handleDeletePress(entry); // Delete on long press
           } else if (longPressedItem && longPressedItem !== entry.id) {
             setLongPressedItem(null); // Reset long press state
           } else {
@@ -130,15 +130,21 @@ export default function JournalScreen({ navigation }) {
         }}
       >
         {isItemLongPressed ? (
-          <Ionicons name="trash-outline" size={24} color="white" onPress={() => handleDeletePress(entry.id)} />
+          <Ionicons name="trash-outline" size={24} color="white" onPress={() => handleDeletePress(entry)} />
         ) : (
           <View>
+            {/* Title and Date */}
             <View style={styles.entryTextContainer}>
               <Text style={styles.entryTextTitle} numberOfLines={1}>
                 {entry.title}
               </Text>
               <Text style={styles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
             </View>
+
+            {/* Tags and time*/}
+            <View style={styles.entryTextContainer}>
+            </View>
+            
             <Text style={styles.entryText} numberOfLines={6}>
               {entry.body}
             </Text>
@@ -154,7 +160,6 @@ export default function JournalScreen({ navigation }) {
 
   return (
     <ImageBackground source={LibraryBG} style={styles.backgroundImage}>
-      
       <FlatList
         contentContainerStyle={styles.scrollContainer}
         data={journalEntries.flatMap((yearGroup) => [

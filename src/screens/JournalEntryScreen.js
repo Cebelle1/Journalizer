@@ -6,6 +6,7 @@ import BackgroundImage from '../assets/image/journalizer-background-1.png';
 import LibraryBG from '../assets/image/library-background-6.png';
 import TagModal from '../components/TagModal';
 import { themeStyle } from '../styles/theme';
+import { tagStyles } from '../styles/componentStyle';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Used to prevent the keyboard from shifting the background image
@@ -83,18 +84,26 @@ export default function JournalEntryScreen({ navigation, route }){
       console.error('Failed to save journal entry:', error);
     }
   };
-
+  
+  // Handle adding a tag
   const addTag = (tag) => {
     if (tag.trim() !== '') {
       setTags(prevTags => {
+        // Add tag if not in list
         if (!prevTags.includes(tag)) {
-          return [...prevTags, tag];
+          return [...prevTags, tag.trim()];
         }
-        const newTags = [...prevTags, tag.trim()];
-        return newTags;
+        alert('Tag already exists');
+        return prevTags;
       });
     }
     setTagModalVisible(false);
+  };
+
+  const deleteTag = (tag) => {
+    setTags(prevTags => {
+      return prevTags.filter(t => t !== tag);
+    });
   };
 
   if (loading) {
@@ -130,12 +139,12 @@ export default function JournalEntryScreen({ navigation, route }){
 
         {/* Tag Picker */}
         <TouchableOpacity onPress={() => setTagModalVisible(true)}>
-          <View style={styles.tagsContainer}>
-            <Ionicons name="pricetag-outline" size={20} style={styles.tagIcon} />
+          <View style={tagStyles.tagsContainer}>
+            <Ionicons name="pricetag-outline" size={20} style={tagStyles.tagIcon} />
             {/** Display individual tags */}
             {tags.map((tag, index) => (
-              <View key={index} style={[styles.tag, styles.tagBorder]}>
-                <Text style={styles.tagText}>{tag}</Text>
+              <View key={index} style={tagStyles.tagBorder}>
+                <Text style={tagStyles.tagText}>{tag}</Text>
               </View>
             ))}
           </View>
@@ -146,7 +155,8 @@ export default function JournalEntryScreen({ navigation, route }){
           visible={tagModalVisible}
           onClose={() => setTagModalVisible(false)}
           onAddTag={(addTag)}
-          tags={tags}
+          onDeleteTag={(deleteTag)}
+          tags={tags}   // Pass current tags to display in modal
         />
         
         {/* Title Inputs */}
@@ -193,33 +203,6 @@ const styles = StyleSheet.create({
     fontSize: 20, 
     fontFamily: 'Montserrat-Bold',
     color: themeStyle.white,
-  },
-  tagsContainer: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    marginBottom: 10,
-    },
-  tagIcon: {
-    marginRight: 5,
-    padding: 5,
-    color: themeStyle.white,
-  },
-  tagText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: themeStyle.black,
-  },
-  tag: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    margin: 3,
-  },
-  tagBorder: {
-    borderWidth: 1,
-    backgroundColor: themeStyle.white,
-    borderColor: themeStyle.white,
-    borderRadius: 20,
-    opacity: 0.7, 
   },
   input: { 
     borderWidth: 1, 
