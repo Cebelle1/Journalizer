@@ -100,7 +100,7 @@ const MenuItem = ({ icon, label, badge, active, badgeColor = '#3d3b60' , onPress
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: themeStyle.white,
+    backgroundColor: themeStyle.lightBrownTint,
     paddingVertical: 20,
     paddingHorizontal: 15,
   },
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
-  gradientHeaderColor: [themeStyle.darkPurple2, themeStyle.lightPurple1],
+  gradientHeaderColor: [themeStyle.darkBrown, themeStyle.brightBrown],
   gradientHeaderFont: 'GenBkBasB',
   gradientIcon: {
     marginRight: 10,
@@ -129,26 +129,26 @@ const styles = StyleSheet.create({
   menuText: {
     marginLeft: 15,
     fontSize: 16,
-    fontFamily: 'Montserrat-Regular',
-    color: themeStyle.darkPurple2,
+    fontFamily: 'Montserrat-Bold',
+    color: themeStyle.darkBrown,
   },
   activeItem: {
-    backgroundColor: themeStyle.lightPurpleTint,
+    backgroundColor: themeStyle.beigeWhite1,
     borderRadius: 8,
   },
   activeText: {
-    color: themeStyle.darkPurple2,
+    color: themeStyle.darkBrown,
     fontFamily: 'Montserrat-Bold',
   },
-  activeIcon: themeStyle.darkPurple2,
-  inactiveIcon: themeStyle.darkGrey1,
+  activeIcon: themeStyle.darkBrown,
+  inactiveIcon: themeStyle.lightBrown,
   badge: {
     marginLeft: 'auto',
     alignSelf: 'center',
   },
   divider: {
     height: 1,
-    backgroundColor: themeStyle.lightGrey1,
+    backgroundColor: themeStyle.darkBrown,
     marginVertical: 15,
   },
   avatar: {

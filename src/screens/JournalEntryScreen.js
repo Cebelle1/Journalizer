@@ -13,7 +13,7 @@ import Tags from '../components/Tags';
 // Assets and Styles
 import { themeStyle } from '../styles/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LibraryBG from '../assets/image/library-background-6.png';
+import NotebookBG from '../assets/image/notebook-background-5.png'
 
 
 // Used to prevent the keyboard from shifting the background image
@@ -136,7 +136,7 @@ export default function JournalEntryScreen({ navigation, route }){
   }
 
   return (  
-    <ImageBackground source={LibraryBG} style={styles.backgroundImage}>
+    <ImageBackground  style={styles.backgroundImage}>
       <KeyboardAvoidingView
         behavior='height'
         style={{ flex: 1 }}
@@ -226,19 +226,21 @@ const styles = StyleSheet.create({
   dateIcon: {
     marginRight: 5,
     padding: 5,
-    color: themeStyle.white,
+    color: themeStyle.beigeWhite1,
   },
   dateText: { 
     fontSize: 20, 
     fontFamily: 'Montserrat-Bold',
-    color: themeStyle.white,
+    color: themeStyle.beigeWhite1,
   },
   input: { 
     borderWidth: 1, 
     padding: 10, 
     marginBottom: 10, 
     borderRadius: 5,
-    backgroundColor: themeStyle.lightPurpleTint,
+    backgroundColor: themeStyle.beigeWhite1,
+    borderBlockColor: themeStyle.darkBrown,
+    borderColor: themeStyle.coffeeBrown,
     textAlignVertical: 'top',
     },
   titleInput: { 
@@ -255,32 +257,11 @@ const styles = StyleSheet.create({
     fontFamily: 'GenBasR',
     fontSize: 18,
   },
-  fab: { 
-    position: 'absolute',
-    bottom: 100,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: themeStyle.darkPurple1, 
-    borderRadius: 25, 
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    elevation: 5, // Add a shadow for Android
-    shadowColor: '#000', // Add shadow for iOS
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  fabText: { 
-    color: themeStyle.white, 
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 18,
-    textAlign: 'center',
-  },
   backgroundImage: {        // Absolute position to prevent keyboard from shifting the background image
     position: 'absolute',
     flex: 1,
     width: d.width,
-    height: d.height
+    height: d.height,
+    backgroundColor: themeStyle.darkBrown
     },
 });

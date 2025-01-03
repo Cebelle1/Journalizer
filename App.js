@@ -57,6 +57,7 @@ export default function App() {
         screenOptions={{
           headerStyle: drawerStyles.headerStyle,
           headerTitleStyle: drawerStyles.headerTitleStyle,
+          headerTintColor: drawerStyles.headerTintColor, 
          }}
       >
         <Drawer.Screen 
@@ -93,6 +94,7 @@ const JournalStack = ({ setIsCreatingEntry }) => {
       screenOptions={{
         headerStyle: stackStyles.headerStyle,
         headerTitleStyle: stackStyles.headerTitleStyle,
+        headerTintColor: stackStyles.headerTintColor,
       }}>
       <Stack.Screen
         name="JournalScreen"
@@ -129,22 +131,24 @@ const JournalStack = ({ setIsCreatingEntry }) => {
 
 const drawerStyles = StyleSheet.create({
   headerStyle: {
-    backgroundColor: themeStyle.lightPurple2,
-    shadowColor: themeStyle.black,
+    backgroundColor: themeStyle.darkBrown3,
+    shadowColor: themeStyle.brightBrown,
   },
   headerTitleStyle: {
     fontFamily: 'Montserrat-Bold',
-    color: themeStyle.black,
+    color: themeStyle.beigeWhite1,
   },
+  headerTintColor: themeStyle.beigeWhite1,
 });
 
 const stackStyles = StyleSheet.create({
   headerStyle: {
-    backgroundColor: themeStyle.lightPurple3,
-    shadowColor: themeStyle.black,
+    backgroundColor: themeStyle.darkBrown3,
+    shadowColor: themeStyle.brightBrown,
   },
   headerTitleStyle: {
     fontFamily: 'Montserrat-Bold',
-    color: themeStyle.black,
+    color: themeStyle.beigeWhite1,
   },
+  headerTintColor: themeStyle.beigeWhite1,
 });

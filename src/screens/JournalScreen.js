@@ -7,9 +7,9 @@ import {
 
 // Asset and Styles
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LibraryBG from '../assets/image/library-background-2.png';
 import { themeStyle } from '../styles/theme';
 import { tagStylesJournalScreen } from '../styles/componentStyle';
+import NotebookBG from '../assets/image/notebook-background-6.png'
 
 // Component and Util
 import { formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
@@ -161,7 +161,7 @@ export default function JournalScreen({ navigation }) {
   }
 
   return (
-    <ImageBackground source={LibraryBG} style={styles.backgroundImage}>
+    <ImageBackground style={styles.backgroundImage}>
       <FlatList
         contentContainerStyle={styles.scrollContainer}
         data={journalEntries.flatMap((yearGroup) => [
@@ -184,34 +184,21 @@ const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
     resizeMode: 'contain',
+    backgroundColor:  themeStyle.lightBrown
   },
   scrollContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  headerText: {
-    fontSize: 24,
-    fontFamily: 'Montserrat-Bold',
-    marginVertical: 20,
-    color: themeStyle.white,
-    textAlign: 'center',
-  },
-  yearDividerContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeStyle.white,
-    padding: 5,
-    alignSelf: 'center',
-  },
   yearDivider: {
     fontSize: 30,
-    color: themeStyle.white,
+    color: themeStyle.beigeWhite1,
     fontFamily: 'Montserrat-Bold',
     paddingVertical: 5,
     textAlign: 'center',
   },
   entry: {
-    backgroundColor: themeStyle.lightPurpleTint,
+    backgroundColor: themeStyle.beigeWhite1,
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
@@ -230,26 +217,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   entryTextTitle: {
-    fontSize: 20,
-    color: themeStyle.darkPurple1,
+    fontSize: 21,
+    color: themeStyle.darkBrown,
     fontFamily: 'GenBasB',
     flexShrink: 1,
   },
   entryTextDate: {
     fontSize: 18,
-    color: themeStyle.darkGrey2,
+    color: themeStyle.black,
     fontFamily: 'GenBasB',
   },
   entryText: {
     fontSize: 16,
-    color: themeStyle.darkGrey1,
+    color: themeStyle.black,
     fontFamily: 'GenBasR',
   },
   fab: {
     position: 'absolute',
     bottom: 20,
     alignSelf: 'center',
-    backgroundColor: themeStyle.darkPurple2,
+    backgroundColor: themeStyle.darkBrown,
     borderRadius: 30,
     width: 60,
     height: 60,
