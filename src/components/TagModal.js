@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Modal, StyleSheet, TouchableOpacity, Alert} from 'react-native';
-import { useEffect } from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { themeStyle } from '../styles/theme.js';
 import { tagStyles } from '../styles/componentStyle.js';
 
 export default function TagModal({ visible, onClose, onAddTag, onDeleteTag, tags = [] }) {

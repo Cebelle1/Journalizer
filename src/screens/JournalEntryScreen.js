@@ -1,13 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity,
+        StyleSheet, ScrollView, ImageBackground, 
+        Dimensions, ActivityIndicator, 
+        KeyboardAvoidingView, Keyboard} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+
+// DB and Modals
 import { readJournalEntry, updateJournalEntry, createJournalEntry } from '../services/journalDB';
-import BackgroundImage from '../assets/image/journalizer-background-1.png';
-import LibraryBG from '../assets/image/library-background-6.png';
 import TagModal from '../components/TagModal';
+import Tags from '../components/Tags';
+
+// Assets and Styles
 import { themeStyle } from '../styles/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Tags from '../components/Tags';
+import LibraryBG from '../assets/image/library-background-6.png';
+
 
 // Used to prevent the keyboard from shifting the background image
 const d = Dimensions.get('window');
@@ -21,6 +28,8 @@ export default function JournalEntryScreen({ navigation, route }){
   const [showDatePicker, setShowDatePicker] = useState(false);
   const entryId  = route.params?.id ?? null; //Get entryId if its updating an existing entry
   const [loading, setLoading] = useState(true);
+  const scrollViewRef = useRef(null);
+  const [isKeyboardOpen, setKeyboardOpen] = useState(false);
 
   // Load the save icon in header
   useEffect(() => {
@@ -40,20 +49,36 @@ export default function JournalEntryScreen({ navigation, route }){
         // Load the entry from the database
         setLoading(true);
         const entry = await readJournalEntry(entryId);
-        //console.log('Loaded entry:', entry);
         if (entry) {
           setDate(new Date(entry.date));
           setTitle(entry.title);
           setBody(entry.body);
           setTags(JSON.parse(entry.tags));
         }
-        
       };
       loadEntry();
     }
     setLoading(false);
   }, [entryId]);
 
+  // When keyboard is open, immediately scroll to end
+  useEffect(() => {
+    const keyboardShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      // Scroll to the bottom of the ScrollView when the keyboard opens
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+      setKeyboardOpen(true);
+    });
+
+    const keyboardHideListener = Keyboard.addListener('keyboardDidHide', () =>{
+      setKeyboardOpen(false);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  })
+  
   // When Save Icon is pressed
   const onSave = async() => {
     try {
@@ -112,10 +137,15 @@ export default function JournalEntryScreen({ navigation, route }){
 
   return (  
     <ImageBackground source={LibraryBG} style={styles.backgroundImage}>
+      <KeyboardAvoidingView
+        behavior='height'
+        style={{ flex: 1 }}
+      >
       <ScrollView 
         contentContainerStyle={styles.container}
         flexGrow={1}
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="never"
+        ref={scrollViewRef}>
 
           {/* Date Text that expands to Date Picker */}
         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
@@ -169,14 +199,20 @@ export default function JournalEntryScreen({ navigation, route }){
           multiline
           value={body}
           onChangeText={setBody}
+          onContentSizeChange={() => {
+            // Scroll to the bottom only if it's not the initial load
+            if (isKeyboardOpen) {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
         />
       </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  keyboardAvWContainer: { flex: 1 },
   container: { 
     padding: 20,
     flexGrow: 1,
@@ -210,6 +246,7 @@ const styles = StyleSheet.create({
     fontFamily: 'GenBasB',
     padding: 5,
     marginBottom: 10,
+    marginTop: 5,
    },
   bodyInput: { 
     flex: 1,

@@ -33,7 +33,6 @@ const getDBInstance = async () => {
 // Create a new journal entry
 export const createJournalEntry = async ({ date, title, body, tags }) => {
   const db = await getDBInstance();
-  console.log('Creating journal entry:', date, title, body, tags);
   const result = await db.runAsync(
     `INSERT INTO journal_entries (date, title, body, tags) VALUES (?, ?, ?, ?)`,
     date,

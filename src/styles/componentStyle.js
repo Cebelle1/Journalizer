@@ -10,7 +10,7 @@ export const tagStyles = StyleSheet.create({
   tagsContainer: { 
     flexDirection: 'row', 
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 1,
     flexWrap: 'wrap',
     },
   tagBorder: {
@@ -33,9 +33,9 @@ export const tagStyles = StyleSheet.create({
     backgroundColor: themeStyle.darkGrey1,
     opacity: 1,
     },
-    activeTagText: {
-      color: themeStyle.white,
-    },
+  activeTagText: {
+    color: themeStyle.white,
+  },
 });
 
 

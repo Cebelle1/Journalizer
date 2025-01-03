@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  ImageBackground,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
+  View,Text,TouchableOpacity,
+  FlatList, StyleSheet, ImageBackground,
+  Alert,ActivityIndicator,
 } from 'react-native';
+
+// Asset and Styles
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LibraryBG from '../assets/image/library-background-2.png';
-import { formatTime, formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
 import { themeStyle } from '../styles/theme';
-import Tags from '../components/Tags';
 import { tagStylesJournalScreen } from '../styles/componentStyle';
+
+// Component and Util
+import { formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
+import Tags from '../components/Tags';
+
 
 // Database
 import { readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
@@ -42,14 +42,11 @@ export default function JournalScreen({ navigation }) {
           return acc;
         }, {});
         
-        console.log(groupedEntries);
         // Convert grouped entries into an array format for FlatList
         const groupedEntriesArray = Object.keys(groupedEntries).sort((a, b) => b - a).map((year) => ({
           year,
           entries: groupedEntries[year],
         }));
-
-        console.log(groupedEntriesArray);
 
         setJournalEntries(groupedEntriesArray);
       } catch (error) {
@@ -143,7 +140,7 @@ export default function JournalScreen({ navigation }) {
               <Text style={styles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
             </View>
 
-            {/* Tags and time*/}
+            {/* Tags */}
             <View style={styles.entryTextContainer}>
               <Tags 
                 tags={JSON.parse(entry.tags)}
