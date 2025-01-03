@@ -67,7 +67,7 @@ export default function App() {
             headerRight: () => (
               !isCreatingEntry && (
                 <TouchableOpacity style={{ marginRight: 15 }}>
-                  <Ionicons name="search" size={24} color="black" />
+                  <Ionicons name="search" size={24} color={themeStyle.beigeWhite1} />
                 </TouchableOpacity>
               )
             )

@@ -36,7 +36,7 @@ export default function JournalEntryScreen({ navigation, route }){
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity onPress={onSave} style={{ marginRight: 15 }}>
-          <Ionicons name="save-outline" size={24} color="black" />
+          <Ionicons name="save-outline" size={24} color={themeStyle.beigeWhite1} />
         </TouchableOpacity>
       ),
     });

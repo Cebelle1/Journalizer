@@ -18,9 +18,8 @@ export const tagStyles = StyleSheet.create({
     margin: 3,
     borderWidth: 1,
     backgroundColor: themeStyle.coffeeBrown,
-    borderColor: themeStyle.lightBrown,
+    borderColor: themeStyle.beigeWhite1,
     borderRadius: 20,
-    opacity: 0.9,
   },
   tagText: {
     fontSize: 13,
