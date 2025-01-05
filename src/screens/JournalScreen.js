@@ -15,7 +15,6 @@ import NotebookBG from '../assets/image/notebook-background-6.png'
 import { formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
 import Tags from '../components/Tags';
 
-
 // Database
 import { readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
 
