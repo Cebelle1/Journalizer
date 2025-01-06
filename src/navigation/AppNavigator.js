@@ -2,10 +2,15 @@ import React, { useState } from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
+import NavigationDrawer from '../components/NavigationDrawer.js';
+
+// Assets and Styles
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { themeStyle } from '../styles/theme.js';
-import NavigationDrawer from '../components/NavigationDrawer.js';
+import { navigatorStyles } from '../styles/componentStyle.js';
+
+//Screens
 import JournalScreen from '../screens/JournalScreen.js';
 import CloudSyncScreen from '../screens/CloudSyncScreen.js';
 import SettingsScreen from '../screens/SettingsScreen.js';
@@ -19,9 +24,9 @@ const JournalStack = ({ setIsCreatingEntry }) => {
     <Stack.Navigator
       initialRouteName="JournalScreen"
       screenOptions={{
-        headerStyle: stackStyles.headerStyle,
-        headerTitleStyle: stackStyles.headerTitleStyle,
-        headerTintColor: stackStyles.headerTintColor,
+        headerStyle: navigatorStyles.headerStyle,
+        headerTitleStyle: navigatorStyles.headerTitleStyle,
+        headerTintColor: navigatorStyles.headerTintColor,
       }}>
       <Stack.Screen
         name="JournalScreen"
@@ -54,9 +59,9 @@ export const AppNavigator = () => {
         initialRouteName="Journals"
         drawerContent={(props) => <NavigationDrawer {...props} />}
         screenOptions={{
-          headerStyle: drawerStyles.headerStyle,
-          headerTitleStyle: drawerStyles.headerTitleStyle,
-          headerTintColor: drawerStyles.headerTintColor,
+          headerStyle: navigatorStyles.headerStyle,
+          headerTitleStyle: navigatorStyles.headerTitleStyle,
+          headerTintColor: navigatorStyles.headerTintColor,
         }}
       >
         <Drawer.Screen
@@ -66,7 +71,7 @@ export const AppNavigator = () => {
             headerRight: () => (
               !isCreatingEntry && (
                 <TouchableOpacity style={{ marginRight: 15 }}>
-                  <Ionicons name="search" size={24} color={themeStyle.beigeWhite1} />
+                  <Ionicons name="search" size={24} color={navigatorStyles.beigeWhite1} />
                 </TouchableOpacity>
               )
             ),
@@ -85,27 +90,3 @@ export const AppNavigator = () => {
     </NavigationContainer>
   );
 };
-
-const drawerStyles = StyleSheet.create({
-  headerStyle: {
-    backgroundColor: themeStyle.darkBrown3,
-    shadowColor: themeStyle.brightBrown,
-  },
-  headerTitleStyle: {
-    fontFamily: 'Montserrat-Bold',
-    color: themeStyle.beigeWhite1,
-  },
-  headerTintColor: themeStyle.beigeWhite1,
-});
-
-const stackStyles = StyleSheet.create({
-  headerStyle: {
-    backgroundColor: themeStyle.darkBrown3,
-    shadowColor: themeStyle.brightBrown,
-  },
-  headerTitleStyle: {
-    fontFamily: 'Montserrat-Bold',
-    color: themeStyle.beigeWhite1,
-  },
-  headerTintColor: themeStyle.beigeWhite1,
-});

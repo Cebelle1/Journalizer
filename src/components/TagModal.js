@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Modal, StyleSheet, TouchableOpacity, Alert} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { tagStyles } from '../styles/componentStyle.js';
+import { tagStyles, deleteStyle } from '../styles/componentStyle.js';
+import { ThemeBackground } from '../styles/theme.js';
 
 export default function TagModal({ visible, onClose, onAddTag, onDeleteTag, tags = [] }) {
   const [tagText, setTagText] = useState('');
@@ -60,7 +61,7 @@ export default function TagModal({ visible, onClose, onAddTag, onDeleteTag, tags
             <View style={tagStyles.tagsContainer}>
             {tags.map((tag, index) => (
                 
-              <TouchableOpacity key={index} style={[tagStyles.tagBorder, tagPressed === tag && styles.pressedEntry]} onPress={() => {
+              <TouchableOpacity key={index} style={[tagStyles.tagBorder, tagPressed === tag && deleteStyle.deleteEntry]} onPress={() => {
                 // If tag was already pressed once  
                 if(tagPressed === tag) {
                     handleDeleteTag(tag);     // Delete tag
@@ -76,7 +77,7 @@ export default function TagModal({ visible, onClose, onAddTag, onDeleteTag, tags
                     <Ionicons 
                       name="trash-outline" 
                       size={16} 
-                      color="white" 
+                      color="black" 
                       style={[tagStyles.tagIcon]} 
                     />
                     <Text style={[tagStyles.tagText, styles.modalTagText]}>{tag}</Text>
@@ -133,10 +134,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-  },
-  pressedEntry: {
-    backgroundColor: 'red',
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 10,
   },
 });

@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,Text,TouchableOpacity,
-  FlatList, StyleSheet, ImageBackground,
+  FlatList, StyleSheet,
   Alert,ActivityIndicator,
 } from 'react-native';
 
 // Asset and Styles
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { themeStyle } from '../styles/theme';
-import { tagStylesJournalScreen } from '../styles/componentStyle';
-import NotebookBG from '../assets/image/notebook-background-6.png'
+import { themeStyle, ThemeBackground } from '../styles/theme';
+import { tagStylesJournalScreen, entryStyles, deleteStyle } from '../styles/componentStyle';
 
 // Component and Util
 import { formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
-import Tags from '../components/Tags';
+import TagList from '../components/TagList';
 
 // Database
 import { readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
@@ -115,7 +114,7 @@ export default function JournalScreen({ navigation }) {
     return (
       <TouchableOpacity
         key={entry.id}
-        style={[styles.entry, isItemLongPressed && styles.longPressedEntry]} 
+        style={[styles.entry, isItemLongPressed && deleteStyle.deleteEntry]} 
         onLongPress={() => setLongPressedItem(entry.id)} // Set long-pressed item
         onPress={() => {
           if (longPressedItem && longPressedItem === entry.id) {
@@ -128,7 +127,7 @@ export default function JournalScreen({ navigation }) {
         }}
       >
         {isItemLongPressed ? (
-          <Ionicons name="trash-outline" size={24} color="white" onPress={() => handleDeletePress(entry)} />
+          <Ionicons name="trash-outline" size={24} color="black" onPress={() => handleDeletePress(entry)} />
         ) : (
           <View>
             {/* Title and Date */}
@@ -141,11 +140,14 @@ export default function JournalScreen({ navigation }) {
 
             {/* Tags */}
             <View style={styles.entryTextContainer}>
-              <Tags 
+              <TagList
                 tags={JSON.parse(entry.tags)}
                 style={tagStylesJournalScreen} />
             </View>
-            
+
+            <View style={entryStyles.divider} />
+
+            {/* Body */ }
             <Text style={styles.entryText} numberOfLines={6}>
               {entry.body}
             </Text>
@@ -160,7 +162,8 @@ export default function JournalScreen({ navigation }) {
   }
 
   return (
-    <ImageBackground style={styles.backgroundImage}>
+
+    <ThemeBackground>
       <FlatList
         contentContainerStyle={styles.scrollContainer}
         data={journalEntries.flatMap((yearGroup) => [
@@ -168,74 +171,65 @@ export default function JournalScreen({ navigation }) {
           ...yearGroup.entries,                         // Insert entries under the year
         ])}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
+        renderItem={renderItem}                         // Main Entry contents
       />
 
       {/* Floating + Button to create Journal */}
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Journal Entry')}>
         <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
-    </ImageBackground>
+    </ThemeBackground>
+
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-    resizeMode: 'contain',
-    backgroundColor:  themeStyle.lightBrown
-  },
   scrollContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
   yearDivider: {
     fontSize: 30,
-    color: themeStyle.beigeWhite1,
+    color: themeStyle.black,
     fontFamily: 'Montserrat-Bold',
     paddingVertical: 5,
     textAlign: 'center',
   },
   entry: {
-    backgroundColor: themeStyle.beigeWhite1,
+    backgroundColor: themeStyle.white,
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 2,
-  },
-  longPressedEntry: {
-    backgroundColor: 'red',
-    justifyContent: 'center',
-    alignItems: 'center',
+    elevation: 5,
   },
   entryTextContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   entryTextTitle: {
-    fontSize: 21,
-    color: themeStyle.darkBrown,
-    fontFamily: 'GenBasB',
+    fontSize: 19,
+    color: themeStyle.black,
+    fontFamily: 'Montserrat-Bold',
     flexShrink: 1,
   },
   entryTextDate: {
-    fontSize: 18,
-    color: themeStyle.black,
-    fontFamily: 'GenBasB',
-  },
-  entryText: {
     fontSize: 16,
     color: themeStyle.black,
-    fontFamily: 'GenBasR',
+    fontFamily: 'Montserrat-Bold',
+  },
+  entryText: {
+    fontSize: 14,
+    color: themeStyle.black,
+    fontFamily: 'Montserrat-Regular',
   },
   fab: {
     position: 'absolute',
     bottom: 20,
     alignSelf: 'center',
-    backgroundColor: themeStyle.darkBrown,
+    backgroundColor: themeStyle.darkPurple5,
     borderRadius: 30,
     width: 60,
     height: 60,

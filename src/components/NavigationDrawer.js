@@ -7,7 +7,7 @@ import { GradientIconBT, GradientIconLR, GradientIconRL, GradientIconTB } from '
 // Assets
 import MatCommIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import IonicIcon from 'react-native-vector-icons/Ionicons';
-import { themeStyle } from '../styles/theme';
+import { pastelRainbowTheme, themeStyle } from '../styles/theme';
 
 export default function NavigationDrawer({ navigation }) {
     const nav = useNavigation();
@@ -100,7 +100,7 @@ const MenuItem = ({ icon, label, badge, active, badgeColor = '#3d3b60' , onPress
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: themeStyle.lightBrownTint,
+    backgroundColor: themeStyle.white,
     paddingVertical: 20,
     paddingHorizontal: 15,
   },
@@ -109,8 +109,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
-  gradientHeaderColor: [themeStyle.darkBrown, themeStyle.brightBrown],
-  gradientHeaderFont: 'GenBkBasB',
+  gradientHeaderColor: [themeStyle.darkPurple5, themeStyle.darkPurple1],
+  gradientHeaderFont: 'GenBkBasR',
   gradientIcon: {
     marginRight: 10,
   },
@@ -130,18 +130,18 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     fontSize: 16,
     fontFamily: 'Montserrat-Bold',
-    color: themeStyle.darkBrown,
+    color: themeStyle.lightPurple2,
   },
   activeItem: {
-    backgroundColor: themeStyle.beigeWhite1,
+    backgroundColor: pastelRainbowTheme.purple,
     borderRadius: 8,
   },
   activeText: {
-    color: themeStyle.darkBrown,
+    color: themeStyle.darkPurple5,
     fontFamily: 'Montserrat-Bold',
   },
-  activeIcon: themeStyle.darkBrown,
-  inactiveIcon: themeStyle.lightBrown,
+  activeIcon: themeStyle.darkPurple1,
+  inactiveIcon: themeStyle.darkPurple1,
   badge: {
     marginLeft: 'auto',
     alignSelf: 'center',

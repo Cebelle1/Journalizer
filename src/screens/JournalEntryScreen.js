@@ -8,13 +8,11 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 // DB and Modals
 import { readJournalEntry, updateJournalEntry, createJournalEntry } from '../services/journalDB';
 import TagModal from '../components/TagModal';
-import Tags from '../components/Tags';
+import TagList from '../components/TagList';
 
 // Assets and Styles
-import { themeStyle } from '../styles/theme';
+import { themeStyle, ThemeBackground } from '../styles/theme';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import NotebookBG from '../assets/image/notebook-background-5.png'
-
 
 // Used to prevent the keyboard from shifting the background image
 const d = Dimensions.get('window');
@@ -36,7 +34,7 @@ export default function JournalEntryScreen({ navigation, route }){
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity onPress={onSave} style={{ marginRight: 15 }}>
-          <Ionicons name="save-outline" size={24} color={themeStyle.beigeWhite1} />
+          <Ionicons name="save-outline" size={24} color={themeStyle.black} />
         </TouchableOpacity>
       ),
     });
@@ -136,7 +134,7 @@ export default function JournalEntryScreen({ navigation, route }){
   }
 
   return (  
-    <ImageBackground  style={styles.backgroundImage}>
+    <ThemeBackground>
       <KeyboardAvoidingView
         behavior='height'
         style={{ flex: 1 }}
@@ -144,9 +142,12 @@ export default function JournalEntryScreen({ navigation, route }){
       <ScrollView 
         contentContainerStyle={styles.container}
         flexGrow={1}
+        nestedScrollEnabled={true}
+        keyboardDismissMode='interactive'
         keyboardShouldPersistTaps="never"
+        showsVerticalScrollIndicator={true}
         ref={scrollViewRef}>
-
+          
           {/* Date Text that expands to Date Picker */}
         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
           <View style={styles.dateContainer}>  
@@ -170,7 +171,7 @@ export default function JournalEntryScreen({ navigation, route }){
         {/* Tag Picker */}
         <TouchableOpacity onPress={() => setTagModalVisible(true)}>
           {/* Display individual tags */}
-          <Tags tags={tags} />
+          <TagList tags={tags} />
         </TouchableOpacity>
 
         {/* Tag Modal */}
@@ -208,13 +209,13 @@ export default function JournalEntryScreen({ navigation, route }){
         />
       </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </ThemeBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: { 
-    padding: 20,
+    padding: 15,
     flexGrow: 1,
     paddingBottom: 100, // Add bottom padding so the save button doesn't overlap with the keyboard
    },
@@ -226,27 +227,29 @@ const styles = StyleSheet.create({
   dateIcon: {
     marginRight: 5,
     padding: 5,
-    color: themeStyle.beigeWhite1,
+    color: themeStyle.black,
   },
   dateText: { 
     fontSize: 20, 
     fontFamily: 'Montserrat-Bold',
-    color: themeStyle.beigeWhite1,
+    color: themeStyle.black,
   },
   input: { 
-    borderWidth: 1, 
     padding: 10, 
     marginBottom: 10, 
-    borderRadius: 5,
-    backgroundColor: themeStyle.beigeWhite1,
-    borderBlockColor: themeStyle.darkBrown,
-    borderColor: themeStyle.coffeeBrown,
+    borderRadius: 8,
+    backgroundColor: themeStyle.white,
     textAlignVertical: 'top',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
     },
   titleInput: { 
-    fontSize: 22,
-    fontFamily: 'GenBasB',
+    fontSize: 20,
+    fontFamily: 'Montserrat-Bold',
     padding: 5,
+    color: themeStyle.black,
     marginBottom: 10,
     marginTop: 5,
    },
@@ -254,14 +257,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexGrow: 1,
     height: '30%',    // Flexible height
-    fontFamily: 'GenBasR',
-    fontSize: 18,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 16,
   },
-  backgroundImage: {        // Absolute position to prevent keyboard from shifting the background image
-    position: 'absolute',
-    flex: 1,
-    width: d.width,
-    height: d.height,
-    backgroundColor: themeStyle.darkBrown
-    },
 });

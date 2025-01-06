@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { tagStyles } from '../styles/componentStyle';
 
-export default function Tags({ tags , style}){
+export default function TagList({ tags , style}){
     if (!tags || tags.length === 0) {
       return null;
     }
