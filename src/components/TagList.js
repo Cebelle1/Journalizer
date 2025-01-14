@@ -4,9 +4,6 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { tagStyles } from '../styles/componentStyle';
 
 export default function TagList({ tags , style}){
-    if (!tags || tags.length === 0) {
-      return null;
-    }
 
     const iconSize = style?.tagIcon?.size || tagStyles.tagIcon.size;  // Cannot set in stylesheet and pass in, so set here
     return (
