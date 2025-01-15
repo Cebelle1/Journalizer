@@ -52,6 +52,30 @@ export const readAllJournalEntries = async () => {
   return allRows;
 };
 
+// Search for journal entries
+export const searchJournalEntries = async ({startDate, endDate, title, tags}) => {
+  const db = await getDBInstance();
+  const query = 'SELECT * FROM journal_entries WHERE ';
+
+  const dateFilters = [];
+  if (startDate) {
+    dateFilters.push(`created_at >= '${startDate}'`);
+  }
+  if (endDate) {
+    dateFilters.push(`created_at <= '${endDate}'`);
+  }
+
+  const titleFilter = title ? `title LIKE '%${title}%'` : '';
+  const tagsFilter = tags && tags.length > 0 ? `tags IN (${tags.map(tag => `'${tag}'`).join(', ')})` : '';
+
+  const filters = [...dateFilters, titleFilter, tagsFilter].filter(filter => filter !== '');
+  const whereClause = filters.join(' AND ');
+  const finalQuery = query + whereClause;
+
+  const result = await db.runAsync(finalQuery);
+  return result;
+}
+
 // Read a single journal entry
 export const readJournalEntry = async (id) => {
   const db = await getDBInstance();

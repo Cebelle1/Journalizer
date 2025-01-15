@@ -9,34 +9,59 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { themeStyle } from '../styles/theme';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const SearchModal = ({ visible, onClose, onApplyFilters }) => {
+export default function SearchModal({ visible, onClose, onApplyFilters }) {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [tags, setTags] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTitle, setSearchTitle] = useState('');
 
   const handleApplyFilters = () => {
-    onApplyFilters({
-      dateRange: { startDate, endDate },
-      tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-      searchQuery,
-    });
-    onClose();
+    // Checks
+    if ( (startDate && !endDate || !startDate && endDate)){   // logical xor
+      alert('To search by date range, both start and end dates must be selected.')
+      // No return to close modal to reset date incase its unwanted.
+    }
+    if (endDate && startDate && endDate < startDate){
+      alert('End Date must be after Start Date');
+      return; // Return to not close modal, for easier reselect date.
+    }
+
+    if( !startDate && !endDate && !tags && !searchTitle){
+      alert('No filter applied');
+    } else {
+      onApplyFilters({    // Passes back to onApplyFilters back in JournalScreen.js
+        dateRange: { startDate, endDate },
+        tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        searchTitle,
+      });
+    }
+    // Reset every selection
+    resetSelection();
   };
+
+  const resetSelection = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setTags('');
+    setSearchTitle('');
+    onClose();
+  }
 
   return (
     <Modal
       animationType="slide"
       transparent={true}
       visible={visible}
-      onRequestClose={onClose}
+      onRequestClose={resetSelection}
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Search Filters</Text>
+          <Text style={styles.modalTitle}>Search By?</Text>
 
           {/* Date Range */}
           <View style={styles.dateContainer}>
@@ -45,6 +70,7 @@ const SearchModal = ({ visible, onClose, onApplyFilters }) => {
               onPress={() => setShowStartDatePicker(true)}
               style={styles.datePickerButton}
             >
+              <Ionicons name="calendar" size={20} style={styles.dateIcon} />
               <Text>{startDate ? startDate.toLocaleDateString() : 'Select Date'}</Text>
             </TouchableOpacity>
             {showStartDatePicker && (
@@ -64,6 +90,7 @@ const SearchModal = ({ visible, onClose, onApplyFilters }) => {
               onPress={() => setShowEndDatePicker(true)}
               style={styles.datePickerButton}
             >
+              <Ionicons name="calendar" size={20} style={styles.dateIcon} />
               <Text>{endDate ? endDate.toLocaleDateString() : 'Select Date'}</Text>
             </TouchableOpacity>
             {showEndDatePicker && (
@@ -77,6 +104,9 @@ const SearchModal = ({ visible, onClose, onApplyFilters }) => {
                 }}
               />
             )}
+
+            <View style={styles.divider} />
+
           </View>
 
           {/* Tags */}
@@ -89,18 +119,18 @@ const SearchModal = ({ visible, onClose, onApplyFilters }) => {
           />
 
           {/* Search Query */}
-          <Text style={styles.label}>Search Query:</Text>
+          <Text style={styles.label}>Search By Title:</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter text to search"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+            value={searchTitle}
+            onChangeText={setSearchTitle}
           />
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
+            <Button title="Close" onPress={resetSelection} color="red" />
             <Button title="Apply" onPress={handleApplyFilters} />
-            <Button title="Close" onPress={onClose} color="red" />
           </View>
         </View>
       </View>
@@ -111,13 +141,13 @@ const SearchModal = ({ visible, onClose, onApplyFilters }) => {
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',  // black + translucent
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
     width: '80%',
-    backgroundColor: 'white',
+    backgroundColor: themeStyle.white,
     borderRadius: 10,
     padding: 20,
     alignItems: 'center',
@@ -131,6 +161,10 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
   },
+  dateIcon: {
+    marginRight: 5,
+    color: themeStyle.black,
+  },
   label: {
     fontSize: 16,
     marginBottom: 5,
@@ -138,15 +172,16 @@ const styles = StyleSheet.create({
   datePickerButton: {
     padding: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: themeStyle.lightGrey2,
     borderRadius: 5,
     marginBottom: 10,
     alignItems: 'center',
+    flexDirection: 'row',
   },
   input: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: themeStyle.lightGrey2,
     borderRadius: 5,
     padding: 10,
     marginBottom: 20,
@@ -156,6 +191,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
+  divider: {
+    height: 1,
+    backgroundColor: themeStyle.black,
+    marginVertical: 5,
+  },
 });
 
-export default SearchModal;

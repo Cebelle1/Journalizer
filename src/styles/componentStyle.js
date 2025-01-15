@@ -46,13 +46,10 @@ export const searchStyles = StyleSheet.create({
     size: 20,
   },
   searchContainer: {
-    flexDirection: 'row', 
-    alignItems: 'center',
-    marginBottom: 1,
+    padding: 3,
     margin: 10,
     backgroundColor: themeStyle.white,
     borderRadius: 10,
-    paddingHorizontal: 10,
     height: '100%',
     width: '95%', 
     elevation: 2, 
@@ -61,7 +58,10 @@ export const searchStyles = StyleSheet.create({
     shadowRadius: 3, 
   },
   searchBorder: {
-    paddingHorizontal: 8,
+    flexDirection: 'row', 
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   searchText: {
     fontSize: 13,
@@ -97,7 +97,6 @@ export const entryStyles = StyleSheet.create({
     backgroundColor: themeStyle.black,
     marginVertical: 5,
   },
-
 })
 
 export const navigatorStyles = StyleSheet.create({

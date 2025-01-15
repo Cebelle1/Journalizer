@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity,
   FlatList, StyleSheet,
@@ -17,7 +17,7 @@ import SearchModal from '../components/SearchModal';
 import SearchBar from '../components/SearchBar';
 
 // Database
-import { readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
+import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries } from '../services/journalDB';
 
 export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
