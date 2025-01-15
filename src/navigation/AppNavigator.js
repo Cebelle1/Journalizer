@@ -23,6 +23,7 @@ const JournalStack = ({ setIsCreatingEntry }) => {
   return (
     <Stack.Navigator
       initialRouteName="JournalScreen"
+      headerMode="screen"
       screenOptions={{
         headerStyle: navigatorStyles.headerStyle,
         headerTitleStyle: navigatorStyles.headerTitleStyle,
@@ -68,13 +69,6 @@ export const AppNavigator = () => {
           name="Journals"
           options={{
             headerShown: !isCreatingEntry,
-            headerRight: () => (
-              !isCreatingEntry && (
-                <TouchableOpacity style={{ marginRight: 15 }}>
-                  <Ionicons name="search" size={24} color={navigatorStyles.beigeWhite1} />
-                </TouchableOpacity>
-              )
-            ),
           }}
         >
           {() => (

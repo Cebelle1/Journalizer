@@ -39,6 +39,39 @@ export const tagStyles = StyleSheet.create({
   },
 });
 
+export const searchStyles = StyleSheet.create({
+  searchIcon: {
+    marginRight: 5,
+    color: themeStyle.black,
+    size: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row', 
+    alignItems: 'center',
+    marginBottom: 1,
+    margin: 10,
+    backgroundColor: themeStyle.white,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: '100%',
+    width: '95%', 
+    elevation: 2, 
+    shadowColor: '#000', 
+    shadowOpacity: 0.3, 
+    shadowRadius: 3, 
+  },
+  searchBorder: {
+    paddingHorizontal: 8,
+  },
+  searchText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    paddingVertical: 1,
+    paddingHorizontal: 1,
+    color: themeStyle.black,
+  },
+});
+
 
 export const tagStylesJournalScreen = StyleSheet.create({
   tagText: {

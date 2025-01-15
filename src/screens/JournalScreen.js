@@ -1,18 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import {
-  View,Text,TouchableOpacity,
+  View, Text, TouchableOpacity,
   FlatList, StyleSheet,
-  Alert,ActivityIndicator,
+  Alert, ActivityIndicator,
 } from 'react-native';
 
 // Asset and Styles
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
-import { tagStylesJournalScreen, entryStyles, deleteStyle } from '../styles/componentStyle';
+import { tagStylesJournalScreen, entryStyles, deleteStyle, navigatorStyles } from '../styles/componentStyle';
 
 // Component and Util
 import { formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
 import TagList from '../components/TagList';
+import SearchModal from '../components/SearchModal';
+import SearchBar from '../components/SearchBar';
 
 // Database
 import { readAllJournalEntries, deleteJournalEntry } from '../services/journalDB';
@@ -21,6 +23,30 @@ export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [longPressedItem, setLongPressedItem] = useState(null); // Tracks long-pressed item ID
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [filters, setFilters] = useState({
+    dateRange: { startDate: null, endDate: null},
+    tags: [],
+    searchQuery: '',
+  });
+
+  const onSearch = useCallback(() => {
+    setSearchModalVisible(true);
+  }, []);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: "",    // Overwrite the og title
+      headerShown: true,
+      headerStyle: [navigatorStyles.headerStyle, {height: 30}],
+      headerLeft: () => (
+        <SearchBar
+          onSearch={onSearch}>
+        </SearchBar>
+      ),
+    });
+  }, [navigation, onSearch]);
+
 
   // Load all journal entries from the database
   useEffect(() => {
@@ -56,19 +82,11 @@ export default function JournalScreen({ navigation }) {
     loadEntries();
   }, []);
 
-  const onSearch = useCallback(() => {
-    console.log('Search button pressed');
-  }, []);
+  const onApplyFilters = (appliedFilters) => {
+    setFilters(appliedFilters);
+    console.log('Filters applied:', appliedFilters);
+  };
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={onSearch} style={{ marginRight: 15 }}>
-          <Ionicons name="search-outline" size={24} color="black" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, onSearch]);
 
   const deleteSelectedJournalEntry = async (id) => {
     await deleteJournalEntry(id);
@@ -162,7 +180,6 @@ export default function JournalScreen({ navigation }) {
   }
 
   return (
-
     <ThemeBackground>
       <FlatList
         contentContainerStyle={styles.scrollContainer}
@@ -178,6 +195,12 @@ export default function JournalScreen({ navigation }) {
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Journal Entry')}>
         <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
+
+      <SearchModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+        onApplyFilters={onApplyFilters}
+      />
     </ThemeBackground>
 
   );
