@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
-import { createDrawerNavigator } from '@react-navigation/drawer';
-import { createStackNavigator } from '@react-navigation/stack';
-import { NavigationContainer } from '@react-navigation/native';
-import NavigationDrawer from '../components/NavigationDrawer.js';
+import React, { useState } from "react";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { createStackNavigator } from "@react-navigation/stack";
+import { NavigationContainer } from "@react-navigation/native";
+import NavigationDrawer from "../components/NavigationDrawer.js";
 
 // Assets and Styles
-import { StyleSheet, TouchableOpacity } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { themeStyle } from '../styles/theme.js';
-import { navigatorStyles } from '../styles/componentStyle.js';
+import { StyleSheet, TouchableOpacity } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { themeStyle } from "../styles/theme.js";
+import { navigatorStyles } from "../styles/componentStyle.js";
 
 //Screens
-import JournalScreen from '../screens/JournalScreen.js';
-import CloudSyncScreen from '../screens/CloudSyncScreen.js';
-import SettingsScreen from '../screens/SettingsScreen.js';
-import JournalEntryScreen from '../screens/JournalEntryScreen.js';
+import JournalScreen from "../screens/JournalScreen.js";
+import CloudSyncScreen from "../screens/CloudSyncScreen.js";
+import SettingsScreen from "../screens/SettingsScreen.js";
+import JournalEntryScreen from "../screens/JournalEntryScreen.js";
+import TagScreen from "../screens/TagScreen.js";
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -28,7 +29,8 @@ const JournalStack = ({ setIsCreatingEntry }) => {
         headerStyle: navigatorStyles.headerStyle,
         headerTitleStyle: navigatorStyles.headerTitleStyle,
         headerTintColor: navigatorStyles.headerTintColor,
-      }}>
+      }}
+    >
       <Stack.Screen
         name="JournalScreen"
         component={JournalScreen}
@@ -80,6 +82,7 @@ export const AppNavigator = () => {
         </Drawer.Screen>
         <Drawer.Screen name="Cloud Sync" component={CloudSyncScreen} />
         <Drawer.Screen name="Settings" component={SettingsScreen} />
+        <Drawer.Screen name="Tag" component={TagScreen} />
       </Drawer.Navigator>
     </NavigationContainer>
   );
