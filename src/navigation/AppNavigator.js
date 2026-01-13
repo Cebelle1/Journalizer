@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { createDrawerNavigator } from '@react-navigation/drawer';
-import { createStackNavigator } from '@react-navigation/stack';
-import { NavigationContainer } from '@react-navigation/native';
-import NavigationDrawer from '../components/NavigationDrawer.js';
+import React, { useState } from "react";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { createStackNavigator } from "@react-navigation/stack";
+import { NavigationContainer } from "@react-navigation/native";
+import NavigationDrawer from "../components/NavigationDrawer.js";
 
 // Assets and Styles
 import { StyleSheet, TouchableOpacity } from 'react-native';
@@ -29,7 +29,8 @@ const JournalStack = ({ setIsCreatingEntry }) => {
         headerStyle: navigatorStyles.headerStyle,
         headerTitleStyle: navigatorStyles.headerTitleStyle,
         headerTintColor: navigatorStyles.headerTintColor,
-      }}>
+      }}
+    >
       <Stack.Screen
         name="JournalScreen"
         component={JournalScreen}
@@ -77,6 +78,7 @@ export const AppNavigator = () => {
         <Drawer.Screen name="Tags" component={TagsScreen} />
         <Drawer.Screen name="Cloud Sync" component={CloudSyncScreen} />
         <Drawer.Screen name="Settings" component={SettingsScreen} />
+        <Drawer.Screen name="Tag" component={TagScreen} />
       </Drawer.Navigator>
     </NavigationContainer>
   );
