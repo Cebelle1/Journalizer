@@ -78,7 +78,6 @@ export const AppNavigator = () => {
         <Drawer.Screen name="Tags" component={TagsScreen} />
         <Drawer.Screen name="Cloud Sync" component={CloudSyncScreen} />
         <Drawer.Screen name="Settings" component={SettingsScreen} />
-        <Drawer.Screen name="Tag" component={TagScreen} />
       </Drawer.Navigator>
     </NavigationContainer>
   );
