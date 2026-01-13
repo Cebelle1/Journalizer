@@ -35,3 +35,35 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/*.iml
+android/.idea/
+android/*.hprof
+android/.cxx/
+
+# iOS
+ios/Pods/
+ios/**/*.mode1v3
+ios/**/*.mode2v3
+ios/**/*.moved-aside
+ios/**/*.pbxuser
+ios/**/*.perspectivev3
+ios/**/*.xcuserstate
+ios/**/*.xcworkspace/xcuserdata/
+
+# Logs
+*.log
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+

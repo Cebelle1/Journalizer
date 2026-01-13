@@ -6,10 +6,9 @@
     "orientation": "portrait",
     "icon": "./src/assets/image/journalizer-icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./src/assets/image/journalizer-splash-screen-4.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#ddd7e2"
     },
     "ios": {
@@ -28,7 +27,7 @@
     },
     "plugins": [
       [
-      "expo-font"
+        "expo-font"
       ],
       [
         "expo-sqlite"
@@ -37,10 +36,16 @@
         "expo-splash-screen",
         {
           "image": "./src/assets/image/journalizer-splash-screen-4.png",
-          "resizeMode": "contain",
+          "resizeMode": "cover",
           "backgroundColor": "#ddd7e2"
         }
-      ]
-    ]
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "44a0b814-74db-439a-80b8-48ed76cfb8cd"
+      }
+    }
   }
 }

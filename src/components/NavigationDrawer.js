@@ -6,7 +6,7 @@ import { GradientIconBT, GradientIconLR, GradientIconRL, GradientIconTB } from '
 
 // Assets
 import MatCommIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import IonicIcon from 'react-native-vector-icons/Ionicons';
+import IonicIcon from '@expo/vector-icons/Ionicons';
 import { pastelRainbowTheme, themeStyle } from '../styles/theme';
 
 export default function NavigationDrawer({ navigation }) {
@@ -19,11 +19,10 @@ export default function NavigationDrawer({ navigation }) {
             
             {/* Header */}
             <View style={styles.header}>
-              <GradientIconBT 
-                IconComponent={IonicIcon}
+              <IonicIcon
                 name="planet-outline" 
                 size={36} 
-                gradientColors={styles.gradientHeaderColor} 
+                color={themeStyle.darkPurple5}
                 style={styles.gradientIcon} />
 
               <GradientTextBT text="Journalizer" 
@@ -50,6 +49,15 @@ export default function NavigationDrawer({ navigation }) {
                   active={currentRoute === 'Cloud Sync'}
                   onPress={() => {
                     navigation.navigate('Cloud Sync')
+                    navigation.closeDrawer();
+                  }} />
+
+                <MenuItem 
+                  icon="label-multiple" 
+                  label="Tags" 
+                  active={currentRoute === 'Tags'}
+                  onPress={() => {
+                    navigation.navigate('Tags')
                     navigation.closeDrawer();
                   }} />
 
@@ -80,7 +88,7 @@ const MenuItem = ({ icon, label, badge, active, badgeColor = '#3d3b60' , onPress
       style={[styles.menuItem, active && styles.activeItem]}
       onPress={onPress}>
       
-      <MatCommIcon name={icon} size={24} color={active ? styles.activeIcon : styles.inactiveIcon} />
+      <MatCommIcon name={icon} size={24} color={active ? themeStyle.darkPurple5 : themeStyle.darkPurple1} />
       <Text style={[styles.menuText, active && styles.activeText]}>{label}</Text>
       {badge && (
         <Badge

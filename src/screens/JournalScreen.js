@@ -4,9 +4,10 @@ import {
   FlatList, StyleSheet,
   Alert, ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Asset and Styles
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
 import { tagStylesJournalScreen, entryStyles, deleteStyle, navigatorStyles } from '../styles/componentStyle';
 
@@ -34,6 +35,24 @@ export default function JournalScreen({ navigation }) {
     setSearchModalVisible(true);
   }, []);
 
+  const clearFilters = useCallback(() => {
+    console.log('Clearing filters');
+    setFilters({
+      dateRange: { startDate: null, endDate: null },
+      tags: [],
+      searchTitle: '',
+    });
+  }, []);
+
+  const hasActiveFilters = 
+    filters.dateRange.startDate || 
+    filters.dateRange.endDate || 
+    filters.tags.length > 0 || 
+    filters.searchTitle;
+  
+  console.log('Current filters state:', filters);
+  console.log('hasActiveFilters:', hasActiveFilters);
+
   useEffect(() => {
     navigation.setOptions({
       headerTitle: "",    // Overwrite the og title
@@ -44,47 +63,114 @@ export default function JournalScreen({ navigation }) {
           onSearch={onSearch}>
         </SearchBar>
       ),
+      headerRight: () => 
+        hasActiveFilters ? (
+          <TouchableOpacity
+            onPress={clearFilters}
+            style={{ marginRight: 15, padding: 8 }}
+          >
+            <Ionicons name="close-circle" size={24} color="#FF3B30" />
+          </TouchableOpacity>
+        ) : null,
     });
-  }, [navigation, onSearch]);
+  }, [navigation, onSearch, hasActiveFilters, clearFilters]);
 
+  // Function to load and group entries
+  const loadEntries = useCallback(async () => {
+    setLoading(true);
+    try {
+      const entries = await readAllJournalEntries();
+      
+      // Group entries by year
+      const groupedEntries = entries.reduce((acc, entry) => {
+        const year = new Date(entry.date).getFullYear();
+        if (!acc[year]) {
+          acc[year] = [];
+        }
+        acc[year].push(entry);
+        return acc;
+      }, {});
+      
+      // Convert grouped entries into an array format for FlatList
+      const groupedEntriesArray = Object.keys(groupedEntries).sort((a, b) => b - a).map((year) => ({
+        year,
+        entries: groupedEntries[year],
+      }));
 
-  // Load all journal entries from the database
+      setJournalEntries(groupedEntriesArray);
+    } catch (error) {
+      console.error('Failed to load journal entries:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load all journal entries from the database on mount
   useEffect(() => {
-    const loadEntries = async () => {
-      setLoading(true);
-      try {
+    loadEntries();
+  }, [loadEntries]);
+
+  // Refresh entries when screen comes into focus (after deleting tags or entries)
+  useFocusEffect(
+    useCallback(() => {
+      loadEntries();
+    }, [loadEntries])
+  );
+
+  const onApplyFilters = (appliedFilters) => {
+    console.log('Filters applied:', appliedFilters);
+    setFilters(appliedFilters);
+    setSearchModalVisible(false);
+  };
+
+  // When filters change, perform the search
+  useEffect(() => {
+    const performSearch = async () => {
+      // If no filters are set, load all entries
+      if (!filters.dateRange.startDate && !filters.dateRange.endDate && filters.tags.length === 0 && !filters.searchTitle) {
         const entries = await readAllJournalEntries();
-        //const sortedEntries = entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+        groupAndSetEntries(entries);
+        return;
+      }
 
-        // Group entries by year
-        const groupedEntries = entries.reduce((acc, entry) => {
-          const year = new Date(entry.date).getFullYear();
-          if (!acc[year]) {
-            acc[year] = [];
-          }
-          acc[year].push(entry);
-          return acc;
-        }, {});
-        
-        // Convert grouped entries into an array format for FlatList
-        const groupedEntriesArray = Object.keys(groupedEntries).sort((a, b) => b - a).map((year) => ({
-          year,
-          entries: groupedEntries[year],
-        }));
+      // Build search params
+      const searchParams = {
+        startDate: filters.dateRange.startDate ? filters.dateRange.startDate.toISOString() : null,
+        endDate: filters.dateRange.endDate ? filters.dateRange.endDate.toISOString() : null,
+        title: filters.searchTitle || null,
+        tags: filters.tags || [],
+      };
 
-        setJournalEntries(groupedEntriesArray);
+      try {
+        setLoading(true);
+        const results = await searchJournalEntries(searchParams);
+        groupAndSetEntries(results);
       } catch (error) {
-        console.error('Failed to load journal entries:', error);
+        console.error('Search failed:', error);
       } finally {
         setLoading(false);
       }
     };
-    loadEntries();
-  }, []);
 
-  const onApplyFilters = (appliedFilters) => {
-    setFilters(appliedFilters);
-    console.log('Filters applied:', appliedFilters);
+    performSearch();
+  }, [filters]);
+
+  const groupAndSetEntries = (entries) => {
+    const groupedEntries = entries.reduce((acc, entry) => {
+      const year = new Date(entry.date).getFullYear();
+      if (!acc[year]) {
+        acc[year] = [];
+      }
+      acc[year].push(entry);
+      return acc;
+    }, {});
+    
+    const groupedEntriesArray = Object.keys(groupedEntries).sort((a, b) => b - a).map((year) => ({
+      year,
+      entries: groupedEntries[year],
+    }));
+
+    setJournalEntries(groupedEntriesArray);
   };
 
 
@@ -159,7 +245,7 @@ export default function JournalScreen({ navigation }) {
             {/* Tags */}
             <View style={styles.entryTextContainer}>
               <TagList
-                tags={JSON.parse(entry.tags)}
+                tags={entry.tags || []}
                 style={tagStylesJournalScreen} />
             </View>
 

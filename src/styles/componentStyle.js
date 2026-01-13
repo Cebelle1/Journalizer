@@ -48,9 +48,10 @@ export const searchStyles = StyleSheet.create({
   searchContainer: {
     padding: 3,
     margin: 10,
+    marginTop: 15,
     backgroundColor: themeStyle.white,
     borderRadius: 10,
-    height: '100%',
+    height: '110%',
     width: '95%', 
     elevation: 2, 
     shadowColor: '#000', 

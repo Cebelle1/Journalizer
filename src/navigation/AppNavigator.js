@@ -6,7 +6,7 @@ import NavigationDrawer from '../components/NavigationDrawer.js';
 
 // Assets and Styles
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { themeStyle } from '../styles/theme.js';
 import { navigatorStyles } from '../styles/componentStyle.js';
 
@@ -14,6 +14,7 @@ import { navigatorStyles } from '../styles/componentStyle.js';
 import JournalScreen from '../screens/JournalScreen.js';
 import CloudSyncScreen from '../screens/CloudSyncScreen.js';
 import SettingsScreen from '../screens/SettingsScreen.js';
+import TagsScreen from '../screens/TagsScreen.js';
 import JournalEntryScreen from '../screens/JournalEntryScreen.js';
 
 const Drawer = createDrawerNavigator();
@@ -65,12 +66,7 @@ export const AppNavigator = () => {
           headerTintColor: navigatorStyles.headerTintColor,
         }}
       >
-        <Drawer.Screen
-          name="Journals"
-          options={{
-            headerShown: !isCreatingEntry,
-          }}
-        >
+        <Drawer.Screen name="Journals" options={{headerShown: !isCreatingEntry}}>
           {() => (
             <JournalStack
               setIsCreatingEntry={setIsCreatingEntry}
@@ -78,6 +74,7 @@ export const AppNavigator = () => {
             />
           )}
         </Drawer.Screen>
+        <Drawer.Screen name="Tags" component={TagsScreen} />
         <Drawer.Screen name="Cloud Sync" component={CloudSyncScreen} />
         <Drawer.Screen name="Settings" component={SettingsScreen} />
       </Drawer.Navigator>

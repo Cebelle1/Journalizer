@@ -6,13 +6,13 @@ import { View, Text, TextInput, TouchableOpacity,
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // DB and Modals
-import { readJournalEntry, updateJournalEntry, createJournalEntry } from '../services/journalDB';
+import { readJournalEntry, updateJournalEntry, createJournalEntry, readUniqueTags, deleteTagFromAllEntries } from '../services/journalDB';
 import TagModal from '../components/TagModal';
 import TagList from '../components/TagList';
 
 // Assets and Styles
 import { themeStyle, ThemeBackground } from '../styles/theme';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 // Used to prevent the keyboard from shifting the background image
 const d = Dimensions.get('window');
@@ -22,6 +22,7 @@ export default function JournalEntryScreen({ navigation, route }){
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
+  const [allAvailableTags, setAllAvailableTags] = useState([]);
   const [tagModalVisible, setTagModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const entryId  = route.params?.id ?? null; //Get entryId if its updating an existing entry
@@ -42,21 +43,31 @@ export default function JournalEntryScreen({ navigation, route }){
 
   // Load existing entry if entryId is provided
   useEffect(() => {
-    if (entryId) {
-      const loadEntry = async () => {
-        // Load the entry from the database
+    const loadData = async () => {
+      try {
         setLoading(true);
-        const entry = await readJournalEntry(entryId);
-        if (entry) {
-          setDate(new Date(entry.date));
-          setTitle(entry.title);
-          setBody(entry.body);
-          setTags(JSON.parse(entry.tags));
+        
+        // Load all unique tags from database
+        const uniqueTags = await readUniqueTags();
+        setAllAvailableTags(uniqueTags || []);
+
+        if (entryId) {
+          // Load the entry from the database
+          const entry = await readJournalEntry(entryId);
+          if (entry) {
+            setDate(new Date(entry.date));
+            setTitle(entry.title || '');
+            setBody(entry.body || '');
+            setTags(Array.isArray(entry.tags) ? entry.tags : []);
+          }
         }
-      };
-      loadEntry();
-    }
-    setLoading(false);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setLoading(false);
+      }
+    };
+    loadData();
   }, [entryId]);
 
   // When keyboard is open, immediately scroll to end
@@ -124,9 +135,8 @@ export default function JournalEntryScreen({ navigation, route }){
   };
 
   const deleteTag = (tag) => {
-    setTags(prevTags => {
-      return prevTags.filter(t => t !== tag);
-    });
+    // Remove tag from current entry only
+    setTags(prevTags => prevTags.filter(t => t !== tag));
   };
 
   if (loading) {
@@ -178,14 +188,17 @@ export default function JournalEntryScreen({ navigation, route }){
         <TagModal
           visible={tagModalVisible}
           onClose={() => setTagModalVisible(false)}
-          onAddTag={(addTag)}
-          onDeleteTag={(deleteTag)}
-          tags={tags}   // Pass current tags to display in modal
+          onAddTag={addTag}
+          onRemoveTag={deleteTag}
+          currentTags={tags}
+          allTags={allAvailableTags}
         />
+
         
         {/* Title Inputs */}
         <TextInput
           placeholder="Title [Optional]"
+          placeholderTextColor="#999"
           style={[styles.input, styles.titleInput]}
           value={title}
           multiline
@@ -196,6 +209,7 @@ export default function JournalEntryScreen({ navigation, route }){
         {/* Body Input */}
         <TextInput
           placeholder="Write your journal..."
+          placeholderTextColor="#999"
           style={[styles.input, styles.bodyInput]}
           multiline
           value={body}
