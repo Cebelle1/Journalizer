@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity,
-        StyleSheet, ScrollView, ImageBackground, 
-        Dimensions, ActivityIndicator, 
-        KeyboardAvoidingView, Keyboard} from 'react-native';
+  StyleSheet, ScrollView, ImageBackground, Modal,
+  Dimensions, ActivityIndicator, 
+  KeyboardAvoidingView, Keyboard, Image, FlatList, Alert} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 
 // DB and Modals
 import { readJournalEntry, updateJournalEntry, createJournalEntry, readUniqueTags, deleteTagFromAllEntries } from '../database/journalDB';
@@ -22,6 +23,10 @@ export default function JournalEntryScreen({ navigation, route }){
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
+  const [images, setImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerUri, setViewerUri] = useState(null);
   const [allAvailableTags, setAllAvailableTags] = useState([]);
   const [tagModalVisible, setTagModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -29,6 +34,13 @@ export default function JournalEntryScreen({ navigation, route }){
   const [loading, setLoading] = useState(true);
   const scrollViewRef = useRef(null);
   const [isKeyboardOpen, setKeyboardOpen] = useState(false);
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 60 });
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems && viewableItems.length > 0) {
+      const idx = viewableItems[0].index ?? 0;
+      setCurrentImageIndex(idx);
+    }
+  });
 
   // Load the save icon in header
   useEffect(() => {
@@ -39,7 +51,7 @@ export default function JournalEntryScreen({ navigation, route }){
         </TouchableOpacity>
       ),
     });
-  }, [navigation, onSave, body, title, tags, date]);  // onSave does not receive the latest state values without this dependency array
+  }, [navigation, onSave, body, title, tags, date, images]);
 
   // Load existing entry if entryId is provided
   useEffect(() => {
@@ -59,6 +71,7 @@ export default function JournalEntryScreen({ navigation, route }){
             setTitle(entry.title || '');
             setBody(entry.body || '');
             setTags(Array.isArray(entry.tags) ? entry.tags : []);
+            setImages(Array.isArray(entry.images) ? entry.images : []);
           }
         }
         setLoading(false);
@@ -98,7 +111,8 @@ export default function JournalEntryScreen({ navigation, route }){
           date: date.toISOString(),
           title: title,
           body: body,
-          tags: tags
+          tags: tags,
+          images: images
         });
       } else {
         // Check if body is empty
@@ -111,6 +125,7 @@ export default function JournalEntryScreen({ navigation, route }){
         title: title,
         body: body,
         tags: tags,
+        images: images
       });
     }
       navigation.navigate('JournalScreen');
@@ -137,6 +152,47 @@ export default function JournalEntryScreen({ navigation, route }){
   const deleteTag = (tag) => {
     // Remove tag from current entry only
     setTags(prevTags => prevTags.filter(t => t !== tag));
+  };
+
+  const pickImages = async () => {
+    try {
+      // Request permissions
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Permission to access the media library is required.');
+        return;
+      }
+
+      // Launch image library
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets) {
+        const newImages = result.assets.map(asset => asset.uri);
+        setImages(prev => [...prev, ...newImages]);
+      }
+    } catch (error) {
+      console.error('Error picking images:', error);
+      Alert.alert('Error', 'Failed to pick images');
+    }
+  };
+
+  const removeImage = (index) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const openImageViewer = (uri) => {
+    setViewerUri(uri);
+    setViewerVisible(true);
+  };
+
+  const closeImageViewer = () => {
+    setViewerVisible(false);
+    setViewerUri(null);
   };
 
   if (loading) {
@@ -206,6 +262,49 @@ export default function JournalEntryScreen({ navigation, route }){
           onChangeText={setTitle}
         />
 
+        {/* Image area */}
+        {images.length === 0 ? (
+          <TouchableOpacity onPress={pickImages} style={styles.addBox}>
+            <Ionicons name="add-circle-outline" size={24} color="#888" />
+            <Text style={styles.addBoxText}>Add images</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.carouselContainer}>
+            <FlatList
+              data={images}
+              keyExtractor={(_, index) => index.toString()}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              scrollEnabled={images.length > 1}
+              decelerationRate="fast"
+              snapToInterval={d.width - 30}
+              snapToAlignment="center"
+              contentContainerStyle={styles.carouselContent}
+              onViewableItemsChanged={onViewableItemsChanged.current}
+              viewabilityConfig={viewabilityConfig.current}
+              renderItem={({ item, index }) => (
+                <View style={styles.carouselItemWrapper}>
+                  <TouchableOpacity activeOpacity={0.9} onPress={() => openImageViewer(item)}>
+                    <Image source={{ uri: item }} style={styles.carouselImage} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.carouselRemoveButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Ionicons name="close" size={22} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+            <Text style={styles.carouselCounter}>{currentImageIndex + 1} / {images.length}</Text>
+            
+            <TouchableOpacity style={styles.carouselAddButton} onPress={pickImages}>
+              <Ionicons name="add" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Body Input */}
         <TextInput
           placeholder="Write your journal..."
@@ -223,6 +322,34 @@ export default function JournalEntryScreen({ navigation, route }){
         />
       </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={viewerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeImageViewer}
+      >
+        <View style={styles.viewerBackdrop}>
+          <TouchableOpacity style={styles.viewerClose} onPress={closeImageViewer}>
+            <Ionicons name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.viewerContent}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+            centerContent={true}
+            bouncesZoom={true}
+          >
+            {viewerUri && (
+              <Image
+                source={{ uri: viewerUri }}
+                style={styles.viewerImage}
+              />
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </ThemeBackground>
   );
 };
@@ -274,4 +401,126 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     fontSize: 16,
   },
+  addBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: themeStyle.white,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#cfcfcf',
+    marginBottom: 14,
+  },
+  addBoxText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#777',
+  },
+  carouselContainer: {
+    marginTop: 10,
+    height: 220,
+    borderRadius: 12,
+    overflow: 'visible',
+    backgroundColor: 'transparent',
+    position: 'relative',
+  },
+  carouselContent: {
+    paddingHorizontal: 0,
+  },
+  carouselItemWrapper: {
+    width: d.width - 30,
+    height: 190,
+    position: 'relative',
+    marginHorizontal: 0,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  carouselImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    resizeMode: 'contain',
+    backgroundColor: '#000',
+  },
+  carouselRemoveButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 18,
+    padding: 6,
+    zIndex: 3,
+  },
+  carouselCounter: {
+    position: 'absolute',
+    top: 10,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  carouselAddButton: {
+    position: 'absolute',
+    bottom: 40,
+    right: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    zIndex: 3,
+    borderWidth: 0,
+  },
+  carouselDots: {
+    position: 'absolute',
+    bottom: 10,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  carouselDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  carouselDotActive: {
+    backgroundColor: '#fff',
+    width: 10,
+  },
+  viewerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewerClose: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 5,
+    padding: 10,
+  },
+  viewerContent: {
+    minHeight: '100%',
+    minWidth: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewerImage: {
+    width: d.width,
+    height: d.height,
+    resizeMode: 'contain',
+  },
 });
+

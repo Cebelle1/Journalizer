@@ -29,6 +29,7 @@ const createJournalDB = async () => {
       date TEXT NOT NULL,
       title TEXT NOT NULL,
       body TEXT NOT NULL,
+      images TEXT,
       createdAt TEXT NOT NULL
     );
     
@@ -70,14 +71,15 @@ const getDBInstance = async () => {
 };
 
 // Create a new journal entry
-export const createJournalEntry = async ({ date, title, body, tags = [] }) => {
+export const createJournalEntry = async ({ date, title, body, tags = [], images = [] }) => {
   try {
     const db = await getDBInstance();
     const now = new Date().toISOString();
+    const imagesJSON = images.length > 0 ? JSON.stringify(images) : null;
     
     const result = await db.runAsync(
-      `INSERT INTO journal_entries (date, title, body, createdAt) VALUES (?, ?, ?, ?)`,
-      [date, title, body, now]
+      `INSERT INTO journal_entries (date, title, body, images, createdAt) VALUES (?, ?, ?, ?, ?)`,
+      [date, title, body, imagesJSON, now]
     );
     
     const entryId = result.lastInsertRowId;
@@ -210,6 +212,7 @@ export const readJournalEntry = async (id) => {
         je.date,
         je.title,
         je.body,
+        je.images,
         je.createdAt,
         GROUP_CONCAT(t.name) as tags
       FROM journal_entries je
@@ -222,7 +225,8 @@ export const readJournalEntry = async (id) => {
     if (result) {
       return {
         ...result,
-        tags: result.tags ? result.tags.split(',').filter(Boolean) : []
+        tags: result.tags ? result.tags.split(',').filter(Boolean) : [],
+        images: result.images ? JSON.parse(result.images) : []
       };
     }
     return null;
@@ -233,14 +237,15 @@ export const readJournalEntry = async (id) => {
 };
 
 // Update a journal entry
-export const updateJournalEntry = async ({ id, date, title, body, tags = [] }) => {
+export const updateJournalEntry = async ({ id, date, title, body, tags = [], images = [] }) => {
   try {
     const db = await getDBInstance();
+    const imagesJSON = images.length > 0 ? JSON.stringify(images) : null;
     
     // Update entry
     const result = await db.runAsync(
-      `UPDATE journal_entries SET date = ?, title = ?, body = ? WHERE id = ?`,
-      [date, title, body, id]
+      `UPDATE journal_entries SET date = ?, title = ?, body = ?, images = ? WHERE id = ?`,
+      [date, title, body, imagesJSON, id]
     );
     
     // Remove old tag associations
