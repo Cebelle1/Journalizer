@@ -12,7 +12,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { themeStyle } from '../styles/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { readUniqueTags } from '../services/journalDB';
+import { readUniqueTags } from '../database/journalDB';
 
 export default function SearchModal({ visible, onClose, onApplyFilters }) {
   const [startDate, setStartDate] = useState(null);
@@ -116,10 +116,12 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
               <DateTimePicker
                 value={startDate || new Date()}
                 mode="date"
-                display="default"
-                onChange={(event, date) => {
+                display="spinner"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) {
+                    setStartDate(selectedDate);
+                  }
                   setShowStartDatePicker(false);
-                  if (date) setStartDate(date);
                 }}
               />
             )}
@@ -136,10 +138,12 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
               <DateTimePicker
                 value={endDate || new Date()}
                 mode="date"
-                display="default"
-                onChange={(event, date) => {
+                display="spinner"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) {
+                    setEndDate(selectedDate);
+                  }
                   setShowEndDatePicker(false);
-                  if (date) setEndDate(date);
                 }}
               />
             )}

@@ -6,7 +6,7 @@ import { View, Text, TextInput, TouchableOpacity,
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // DB and Modals
-import { readJournalEntry, updateJournalEntry, createJournalEntry, readUniqueTags, deleteTagFromAllEntries } from '../services/journalDB';
+import { readJournalEntry, updateJournalEntry, createJournalEntry, readUniqueTags, deleteTagFromAllEntries } from '../database/journalDB';
 import TagModal from '../components/TagModal';
 import TagList from '../components/TagList';
 

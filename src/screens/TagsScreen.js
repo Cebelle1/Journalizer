@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
   ActivityIndicator,
   FlatList,
   TextInput,
+  Dimensions,
 } from 'react-native';
-import { readUniqueTags, deleteTagFromAllEntries, createTag } from '../services/journalDB';
+import { readUniqueTags, deleteTagFromAllEntries, createTag } from '../database/journalDB';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
-import { searchStyles } from '../styles/componentStyle';
+import { navigatorStyles, headerSearchStyles, fabStyles, emptyStateStyles } from '../styles/componentStyle';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 export default function TagsScreen() {
+  const navigation = useNavigation();
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
@@ -28,6 +31,13 @@ export default function TagsScreen() {
   useEffect(() => {
     loadTags();
   }, []);
+
+  // Reload tags when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadTags();
+    }, [])
+  );
 
   const loadTags = async () => {
     try {
@@ -142,38 +152,40 @@ export default function TagsScreen() {
 
   return (
     <ThemeBackground>
-      <ScrollView style={styles.scrollContainer}>
-
-        {/* Search Input */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search tags..."
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close" size={18} color={themeStyle.black} />
-            </TouchableOpacity>
-          )}
+      <ScrollView style={styles.scrollContainer} stickyHeaderIndices={[0]}>
+        
+        {/* Sticky Search Bar */}
+        <View style={styles.stickySearchWrapper}>
+          <View style={headerSearchStyles.searchContainer}>
+            <Ionicons name="search-outline" size={20} style={headerSearchStyles.searchIcon} />
+            <TextInput
+              style={headerSearchStyles.searchInput}
+              placeholder="Search tags..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close" size={18} color={themeStyle.black} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {tags.length === 0 ? (
-          <View style={styles.emptyContainer}>
+          <View style={emptyStateStyles.emptyContainer}>
             <Ionicons name="pricetag" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No tags yet</Text>
-            <Text style={styles.emptySubtext}>
+            <Text style={emptyStateStyles.emptyText}>No tags yet</Text>
+            <Text style={emptyStateStyles.emptySubtext}>
               Create tags when adding entries to manage them here
             </Text>
           </View>
         ) : filteredTags.length === 0 ? (
-          <View style={styles.emptyContainer}>
+          <View style={emptyStateStyles.emptyContainer}>
             <Ionicons name="search" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No tags found</Text>
-            <Text style={styles.emptySubtext}>
+            <Text style={emptyStateStyles.emptyText}>No tags found</Text>
+            <Text style={emptyStateStyles.emptySubtext}>
               Try a different search term
             </Text>
           </View>
@@ -206,7 +218,7 @@ export default function TagsScreen() {
       </ScrollView>
 
       {/* Floating Add Button */}
-      <TouchableOpacity style={styles.fab} onPress={() => setShowAddModal(true)}>
+      <TouchableOpacity style={fabStyles.fab} onPress={() => setShowAddModal(true)}>
         <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
 
@@ -266,6 +278,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
+  stickySearchWrapper: {
+    backgroundColor: themeStyle.background,
+    paddingVertical: 5,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
   headerTitle: {
     fontSize: 30,
     color: themeStyle.black,
@@ -273,25 +291,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     textAlign: 'center',
     marginTop: 20,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: themeStyle.white,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginVertical: 16,
-    height: 40,
-    gap: 8,
-  },
-  searchIcon: {
-    color: themeStyle.black,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: themeStyle.black,
-    padding: 0,
   },
   searchBar: {
     marginVertical: 15,
@@ -341,38 +340,6 @@ const styles = StyleSheet.create({
   },
   deleteButtonDisabled: {
     opacity: 0.5,
-  },
-  emptyContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: themeStyle.black,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    paddingHorizontal: 16,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: themeStyle.darkPurple5,
-    borderRadius: 30,
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
   },
   modalOverlay: {
     position: 'absolute',

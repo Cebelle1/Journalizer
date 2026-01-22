@@ -52,7 +52,7 @@ export default function NavigationDrawer({ navigation }) {
       {/* Menu Options */}
       <ScrollView contentContainerStyle={styles.menuContainer}>
         <MenuItem
-          icon="notebook-multiple"
+          icon="journal-outline"
           label="Journals"
           active={currentRoute === "Journals"}
           onPress={() => {
@@ -62,7 +62,7 @@ export default function NavigationDrawer({ navigation }) {
         />
 
         <MenuItem
-          icon="cloud-sync-outline"
+          icon="cloud-outline"
           label="Cloud Sync"
           active={currentRoute === "Cloud Sync"}
           onPress={() => {
@@ -72,7 +72,7 @@ export default function NavigationDrawer({ navigation }) {
         />
 
                 <MenuItem 
-                  icon="label-multiple" 
+                  icon="pricetags-outline" 
                   label="Tags" 
                   active={currentRoute === 'Tags'}
                   onPress={() => {
@@ -92,16 +92,6 @@ export default function NavigationDrawer({ navigation }) {
           }}
         />
 
-        <MenuItem
-          icon="pricetag-outline"
-          iconFamily="Ionic"
-          label="Tag"
-          active={currentRoute === "Tag"}
-          onPress={() => {
-            navigation.navigate("Tag");
-            navigation.closeDrawer();
-          }}
-        />
       </ScrollView>
 
       {/* Footer */}
@@ -115,7 +105,7 @@ export default function NavigationDrawer({ navigation }) {
 
 const MenuItem = ({
   icon,
-  iconFamily = "", // If not specified, default to MaterialCommunityIcons.  If "Ionic", use IonicIcon
+  iconFamily = "Ionic", // Default to Ionicons if not specified
   label,
   badge,
   active,
@@ -129,7 +119,7 @@ const MenuItem = ({
       style={[styles.menuItem, active && styles.activeItem]}
       onPress={onPress}>
       
-      <MatCommIcon name={icon} size={24} color={active ? themeStyle.darkPurple5 : themeStyle.darkPurple1} />
+      <IconComponent name={icon} size={24} color={active ? themeStyle.darkPurple5 : themeStyle.darkPurple1} />
       <Text style={[styles.menuText, active && styles.activeText]}>{label}</Text>
       {badge && (
         <Badge

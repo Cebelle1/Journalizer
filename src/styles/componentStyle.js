@@ -118,4 +118,66 @@ export const deleteStyle = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-})
+});
+
+export const headerSearchStyles = StyleSheet.create({
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: themeStyle.white,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
+    gap: 8,
+  },
+  searchIcon: {
+    color: themeStyle.black,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: themeStyle.black,
+    padding: 0,
+  },
+});
+
+export const fabStyles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: themeStyle.darkPurple5,
+    borderRadius: 30,
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+});
+
+export const emptyStateStyles = StyleSheet.create({
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 80,
+  },
+  emptyText: {
+    fontSize: 24,
+    color: themeStyle.black,
+    fontFamily: 'Montserrat-Bold',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: '#999',
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+});

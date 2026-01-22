@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { readUniqueTags } from '../services/journalDB';
+import { readUniqueTags } from '../database/journalDB.js';
 import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { tagStyles, deleteStyle } from '../styles/componentStyle.js';

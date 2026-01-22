@@ -3,7 +3,7 @@ import * as SQLite from 'expo-sqlite';
 const createJournalDB = async () => {
   const db = await SQLite.openDatabaseAsync('JournalDB.db');
 
-  // Drop old schema if it exists (for migration)
+  // For development testing only
   try {
     await db.execAsync(`
       DROP TABLE IF EXISTS entry_tags;
@@ -14,7 +14,7 @@ const createJournalDB = async () => {
     console.log('No old tables to drop');
   }
 
-  // Initialize the database with new tables
+  // Init tags, journal_entries, and entry_tags tables
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
     
@@ -352,36 +352,4 @@ const clearDataBase = async () => {
 
 //clearDataBase();
 
-// =============Test
-/*
-(async () => {
-  const db = await createJournalDB();
-  // Create an entry
-  const newEntryId = await createJournalEntry({
-    date: '2024-12-28',
-    title: 'Journalizer',
-    body: 'Journalizer is a journaling app.',
-    tags: ['happy', 'memories'],
-  });
 
-  // Read entries
-  const entries = await readAllJournalEntries();
-  //console.log(entries);
-
-  // Update the entry
-  await updateJournalEntry(db, {
-    id: newEntryId,
-    date: '2024-12-30',
-    title: 'Updated Title',
-    body: 'Updated body content.',
-    tags: ['updated', 'journal'],
-  });
-
-  // Delete the entry
-  //await deleteJournalEntry( newEntryId);
-
-  // Verify deletion
-  const updatedEntries = await readAllJournalEntries();
-  console.log(updatedEntries);
-})();
-*/

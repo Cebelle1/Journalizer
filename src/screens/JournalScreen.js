@@ -3,28 +3,30 @@ import {
   View, Text, TouchableOpacity,
   FlatList, StyleSheet,
   Alert, ActivityIndicator,
+  TextInput,
+  Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
 // Asset and Styles
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
-import { tagStylesJournalScreen, entryStyles, deleteStyle, navigatorStyles } from '../styles/componentStyle';
+import { tagStylesJournalScreen, entryStyles, deleteStyle, navigatorStyles, headerSearchStyles, fabStyles, emptyStateStyles } from '../styles/componentStyle';
 
 // Component and Util
 import { formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
 import TagList from '../components/TagList';
 import SearchModal from '../components/SearchModal';
-import SearchBar from '../components/SearchBar';
 
 // Database
-import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries } from '../services/journalDB';
+import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries } from '../database/journalDB';
 
 export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [longPressedItem, setLongPressedItem] = useState(null); // Tracks long-pressed item ID
   const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const [filters, setFilters] = useState({
     dateRange: { startDate: null, endDate: null},
     tags: [],
@@ -54,26 +56,96 @@ export default function JournalScreen({ navigation }) {
   console.log('hasActiveFilters:', hasActiveFilters);
 
   useEffect(() => {
+    const screenWidth = Dimensions.get('window').width;
+    const searchWidth = screenWidth - 40; // Consistent width, no adjustment needed
+
+    // Build filter summary components
+    const filterComponents = [];
+    if (hasActiveFilters) {
+      if (filters.tags.length > 0) {
+        filterComponents.push(
+          <Text key="tags">
+            <Text style={{ color: '#999', fontSize: 13 }}>tags: </Text>
+            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>{filters.tags.join(', ')}</Text>
+          </Text>
+        );
+      }
+      if (filters.searchTitle) {
+        filterComponents.push(
+          <Text key="title">
+            <Text style={{ color: '#999', fontSize: 13 }}>title: </Text>
+            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>"{filters.searchTitle}"</Text>
+          </Text>
+        );
+      }
+      if (filters.dateRange.startDate && filters.dateRange.endDate) {
+        filterComponents.push(
+          <Text key="date">
+            <Text style={{ color: '#999', fontSize: 13 }}>date: </Text>
+            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>
+              {filters.dateRange.startDate.toLocaleDateString()} - {filters.dateRange.endDate.toLocaleDateString()}
+            </Text>
+          </Text>
+        );
+      } else if (filters.dateRange.startDate) {
+        filterComponents.push(
+          <Text key="date">
+            <Text style={{ color: '#999', fontSize: 13 }}>from: </Text>
+            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>{filters.dateRange.startDate.toLocaleDateString()}</Text>
+          </Text>
+        );
+      } else if (filters.dateRange.endDate) {
+        filterComponents.push(
+          <Text key="date">
+            <Text style={{ color: '#999', fontSize: 13 }}>until: </Text>
+            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>{filters.dateRange.endDate.toLocaleDateString()}</Text>
+          </Text>
+        );
+      }
+    }
+
     navigation.setOptions({
-      headerTitle: "",    // Overwrite the og title
-      headerShown: true,
-      headerStyle: [navigatorStyles.headerStyle, {height: 30}],
-      headerLeft: () => (
-        <SearchBar
-          onSearch={onSearch}>
-        </SearchBar>
+      headerTitle: () => (
+        <TouchableOpacity 
+          style={[headerSearchStyles.searchContainer, { width: searchWidth }]}
+          onPress={() => setSearchModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="search-outline" size={20} style={headerSearchStyles.searchIcon} />
+          {hasActiveFilters ? (
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {filterComponents.map((component, index) => (
+                <React.Fragment key={index}>
+                  {component}
+                  {index < filterComponents.length - 1 && <Text style={{ color: '#999', fontSize: 13 }}> • </Text>}
+                </React.Fragment>
+              ))}
+            </View>
+          ) : (
+            <Text style={[headerSearchStyles.searchInput, { color: '#999' }]} numberOfLines={1}>
+              Search entries...
+            </Text>
+          )}
+          {hasActiveFilters && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                clearFilters();
+              }}
+              style={{ marginLeft: 8}}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={25} color="#f7524aff" />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
       ),
-      headerRight: () => 
-        hasActiveFilters ? (
-          <TouchableOpacity
-            onPress={clearFilters}
-            style={{ marginRight: 15, padding: 8 }}
-          >
-            <Ionicons name="close-circle" size={24} color="#FF3B30" />
-          </TouchableOpacity>
-        ) : null,
+      headerShown: true,
+      headerStyle: [navigatorStyles.headerStyle, {height: 45}],
+      headerLeft: null,
+      headerRight: null,
     });
-  }, [navigation, onSearch, hasActiveFilters, clearFilters]);
+  }, [navigation, hasActiveFilters, clearFilters, searchInput, filters]);
 
   // Function to load and group entries
   const loadEntries = useCallback(async () => {
@@ -113,6 +185,8 @@ export default function JournalScreen({ navigation }) {
   // Refresh entries when screen comes into focus (after deleting tags or entries)
   useFocusEffect(
     useCallback(() => {
+      // Close search modal when coming back from another screen
+      setSearchModalVisible(false);
       loadEntries();
     }, [loadEntries])
   );
@@ -265,20 +339,32 @@ export default function JournalScreen({ navigation }) {
     return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
+  const flatListData = journalEntries.flatMap((yearGroup) => [
+    { year: yearGroup.year, id: yearGroup.year }, // Year Divider
+    ...yearGroup.entries,                         // Insert entries under the year
+  ]);
+
   return (
     <ThemeBackground>
-      <FlatList
-        contentContainerStyle={styles.scrollContainer}
-        data={journalEntries.flatMap((yearGroup) => [
-          { year: yearGroup.year, id: yearGroup.year }, // Year Divider
-          ...yearGroup.entries,                         // Insert entries under the year
-        ])}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}                         // Main Entry contents
-      />
+      {flatListData.length === 0 ? (
+        <View style={emptyStateStyles.emptyContainer}>
+          <Ionicons name="document-text" size={64} color="#ccc" />
+          <Text style={emptyStateStyles.emptyText}>No journals yet</Text>
+          <Text style={emptyStateStyles.emptySubtext}>
+            Tap the + button below to create your first journal entry
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          contentContainerStyle={styles.scrollContainer}
+          data={flatListData}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderItem}                         // Main Entry contents
+        />
+      )}
 
       {/* Floating + Button to create Journal */}
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Journal Entry')}>
+      <TouchableOpacity style={fabStyles.fab} onPress={() => navigation.navigate('Journal Entry')}>
         <Ionicons name="add" size={32} color="#ffffff" />
       </TouchableOpacity>
 
@@ -333,20 +419,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: themeStyle.black,
     fontFamily: 'Montserrat-Regular',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: themeStyle.darkPurple5,
-    borderRadius: 30,
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
   },
 });
