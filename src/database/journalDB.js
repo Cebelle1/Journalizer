@@ -3,24 +3,18 @@ import * as FileSystem from 'expo-file-system';
 
 const createJournalDB = async () => {
   try {
-    console.log('Opening database...');
     const db = await SQLite.openDatabaseAsync('JournalDB.db');
-    console.log('✓ Database connection opened');
     return db;
   } catch (error) {
     console.error('✗ Error opening database:', error);
-    console.log('Attempting to reset database...');
     
     try {
       // Try to delete the corrupted database file
       const dbPath = `${FileSystem.getConstants().documentDirectory}SQLite/JournalDB.db`;
-      console.log('Deleting corrupted database at:', dbPath);
       await FileSystem.deleteAsync(dbPath, { idempotent: true });
       
       // Try opening again
-      console.log('Reopening database after reset...');
       const db = await SQLite.openDatabaseAsync('JournalDB.db');
-      console.log('✓ Database reset and reopened successfully');
       return db;
     } catch (resetError) {
       console.error('✗ Failed to reset database:', resetError);
@@ -32,8 +26,6 @@ const createJournalDB = async () => {
 // Initialize tables on first use
 const initializeTables = async (db) => {
   try {
-    console.log('Initializing tables...');
-    
     try {
       await db.runAsync(`
         CREATE TABLE IF NOT EXISTS tags (
@@ -42,7 +34,6 @@ const initializeTables = async (db) => {
           createdAt TEXT NOT NULL
         )
       `);
-      console.log('✓ Tags table ready');
     } catch (err) {
       console.error('Error creating tags table:', err);
       throw err;
@@ -59,7 +50,6 @@ const initializeTables = async (db) => {
           createdAt TEXT NOT NULL
         )
       `);
-      console.log('✓ Journal entries table ready');
     } catch (err) {
       console.error('Error creating journal_entries table:', err);
       throw err;
@@ -76,16 +66,12 @@ const initializeTables = async (db) => {
           UNIQUE(entryId, tagId)
         )
       `);
-      console.log('✓ Entry tags table ready');
     } catch (err) {
       console.error('Error creating entry_tags table:', err);
       throw err;
     }
-    
-    console.log('✓ Tables initialized');
   } catch (error) {
     console.error('✗ Error initializing tables:', error);
-    console.log('Attempting to recover by deleting and recreating database...');
     
     try {
       // Close any open connections
@@ -93,7 +79,7 @@ const initializeTables = async (db) => {
         try {
           await db.closeAsync?.();
         } catch (e) {
-          console.log('Database already closed');
+          // ignore
         }
       }
       
@@ -103,11 +89,9 @@ const initializeTables = async (db) => {
       
       // Delete corrupted database
       const dbPath = `${FileSystem.getConstants().documentDirectory}SQLite/JournalDB.db`;
-      console.log('Deleting corrupted database at:', dbPath);
       await FileSystem.deleteAsync(dbPath, { idempotent: true });
       
       // Retry
-      console.log('Retrying database initialization...');
       const newDb = await createJournalDB();
       await initializeTables(newDb);
       return newDb;
@@ -124,7 +108,6 @@ let initializingPromise = null;
 
 // Reset the database instance (used after operations that might corrupt the connection)
 const resetDBInstance = () => {
-  console.log('Resetting database instance');
   dbInstance = null;
   initializingPromise = null;
 };
@@ -142,13 +125,11 @@ const getDBInstance = async () => {
     }
     
     // Start initialization
-    console.log('Initializing database...');
     initializingPromise = (async () => {
       const db = await createJournalDB();
       const result = await initializeTables(db);
       // initializeTables might return a new db instance if recovery happened
       const finalDb = result || db;
-      console.log('✓ Database instance ready');
       return finalDb;
     })();
     
@@ -194,7 +175,6 @@ export const createJournalEntry = async ({ date, title, body, tags = [], images 
       }
     }
     
-    console.log('Created journal entry with ID:', entryId);
     return entryId;
   } catch (error) {
     console.error('Error creating journal entry:', error);
@@ -298,8 +278,6 @@ export const readJournalEntry = async (id) => {
     }
     
     const db = await getDBInstance();
-    console.log('Reading entry with ID:', id, 'Type:', typeof id);
-    
     const result = await db.getFirstAsync(`
       SELECT 
         je.id,
@@ -364,7 +342,6 @@ export const updateJournalEntry = async ({ id, date, title, body, tags = [], ima
       }
     }
     
-    console.log('Updated journal entry ID:', id, 'Changes:', result.changes);
     return result.changes;
   } catch (error) {
     console.error('Error updating journal entry:', error);
@@ -380,7 +357,6 @@ export const deleteJournalEntry = async (id) => {
       `DELETE FROM journal_entries WHERE id = ?`,
       [id]
     );
-    console.log('Deleted journal entry ID:', id, 'Changes:', result.changes);
     return result.changes;
   } catch (error) {
     console.error('Error deleting journal entry:', error);
@@ -392,9 +368,7 @@ export const deleteJournalEntry = async (id) => {
 export const readUniqueTags = async () => {
   try {
     const db = await getDBInstance();
-    console.log('Querying all tags from database');
     const result = await db.getAllAsync(`SELECT name FROM tags ORDER BY name ASC`, []);
-    console.log('Tags query result:', result);
     return result ? result.map(tag => tag.name) : [];
   } catch (error) {
     console.error('Error reading unique tags:', error);
@@ -416,7 +390,6 @@ export const deleteTagFromAllEntries = async (tagName) => {
     // Delete the tag itself
     await db.runAsync(`DELETE FROM tags WHERE id = ?`, [tag.id]);
     
-    console.log(`Deleted tag "${tagName}" globally`);
   } catch (error) {
     console.error('Error deleting tag:', error);
     throw error;
@@ -433,7 +406,6 @@ export const createTag = async (tagName) => {
       `INSERT INTO tags (name, createdAt) VALUES (?, ?)`,
       [tagName, now]
     );
-    console.log('Created tag with ID:', result.lastInsertRowId);
     return result.lastInsertRowId;
   } catch (error) {
     console.log('Tag already exists:', tagName);
@@ -453,27 +425,15 @@ export const exportAllData = async () => {
       SELECT * FROM journal_entries ORDER BY date DESC
     `);
     
-    console.log('=== EXPORT DEBUG ===');
-    console.log('Total entries found:', entries.length);
-    if (entries.length > 0) {
-      console.log('Entry IDs:', entries.map(e => e.id));
-      console.log('Entry titles:', entries.map(e => e.title));
-    }
-    
     // Get all tags
     const tags = await db.getAllAsync(`
       SELECT * FROM tags ORDER BY name ASC
     `);
     
-    console.log('Total tags found:', tags.length);
-    
     // Get all entry-tag associations
     const entryTags = await db.getAllAsync(`
       SELECT * FROM entry_tags
     `);
-    
-    console.log('Total entry-tag associations:', entryTags.length);
-    console.log('=== EXPORT DEBUG END ===');
     
     // Parse images JSON for each entry
     const entriesWithParsedImages = entries.map(entry => ({
@@ -489,12 +449,6 @@ export const exportAllData = async () => {
       entryTags
     };
     
-    console.log('Exported data:', {
-      entries: backup.entries.length,
-      tags: backup.tags.length,
-      entryTags: backup.entryTags.length
-    });
-    
     return backup;
   } catch (error) {
     console.error('Error exporting data:', error);
@@ -505,27 +459,7 @@ export const exportAllData = async () => {
 // Import data from backup
 export const importAllData = async (backup) => {
   try {
-    console.log('=== IMPORT START ===');
-    console.log('Getting database instance...');
-    
     const db = await getDBInstance();
-    
-    console.log('✓ Database instance obtained');
-    console.log('=== BACKUP STRUCTURE DEBUG ===');
-    console.log('Received backup:', {
-      hasBackup: !!backup,
-      backupKeys: backup ? Object.keys(backup) : null,
-      backupType: typeof backup,
-      isArray: Array.isArray(backup),
-    });
-    
-    if (backup?.entries) {
-      console.log('backup.entries:', {
-        type: typeof backup.entries,
-        isArray: Array.isArray(backup.entries),
-        keys: backup.entries && typeof backup.entries === 'object' ? Object.keys(backup.entries) : null,
-      });
-    }
     
     // Unwrap if the backup has a wrapper structure (entries contains the real data)
     let actualBackup = backup;
@@ -535,13 +469,11 @@ export const importAllData = async (backup) => {
       const entriesObj = backup.entries;
       // If entries.entries exists and is an array, we have a wrapped structure
       if (Array.isArray(entriesObj.entries) && Array.isArray(entriesObj.tags) && Array.isArray(entriesObj.entryTags)) {
-        console.log('✓ Detected wrapped backup structure (entries is an object), unwrapping...');
         actualBackup = entriesObj;
       }
     }
     // Check if backup is already in the correct format
     else if (Array.isArray(backup?.entries) && Array.isArray(backup?.tags) && Array.isArray(backup?.entryTags)) {
-      console.log('✓ Backup already in correct format');
       actualBackup = backup;
     }
     
@@ -551,7 +483,6 @@ export const importAllData = async (backup) => {
       throw new Error('Invalid backup format: ' + errorMsg);
     }
     
-    console.log('✓ Backup validation passed');
     
     // Merge restore: INSERT OR REPLACE to keep local entries not in backup
     // This way: backup entries override local, but local-only entries are kept
@@ -563,7 +494,6 @@ export const importAllData = async (backup) => {
         [tag.id, tag.name, tag.createdAt]
       );
     }
-    console.log('✓ Tags imported/updated');
     
     // Import journal entries (update if exists, insert if new)
     for (const entry of actualBackup.entries) {
@@ -576,7 +506,6 @@ export const importAllData = async (backup) => {
         [entry.id, entry.date, entry.title, entry.body, imagesJSON, entry.createdAt]
       );
     }
-    console.log('✓ Journal entries imported/updated');
     
     // Import entry-tag associations (update if exists, insert if new)
     for (const entryTag of actualBackup.entryTags) {
@@ -585,14 +514,6 @@ export const importAllData = async (backup) => {
         [entryTag.id, entryTag.entryId, entryTag.tagId]
       );
     }
-    console.log('✓ Entry-tag associations imported/updated');
-    
-    console.log('✓ Imported data successfully:', {
-      entries: actualBackup.entries.length,
-      tags: actualBackup.tags.length,
-      entryTags: actualBackup.entryTags.length
-    });
-    console.log('=== IMPORT END ===');
     
     return true;
   } catch (error) {

@@ -45,7 +45,6 @@ export default function JournalScreen({ navigation }) {
   const totalEntriesCount = journalEntries.reduce((sum, group) => sum + (group.entries?.length || 0), 0);
 
   const clearFilters = useCallback(() => {
-    console.log('Clearing filters');
     setFilters({
       dateRange: { startDate: null, endDate: null },
       tags: [],
@@ -59,8 +58,6 @@ export default function JournalScreen({ navigation }) {
     filters.tags.length > 0 || 
     filters.searchTitle;
   
-  console.log('Current filters state:', filters);
-  console.log('hasActiveFilters:', hasActiveFilters);
 
   useEffect(() => {
     const screenWidth = Dimensions.get('window').width;
@@ -281,7 +278,6 @@ export default function JournalScreen({ navigation }) {
   );
 
   const onApplyFilters = (appliedFilters) => {
-    console.log('Filters applied:', appliedFilters);
     setFilters(appliedFilters);
     setSearchModalVisible(false);
   };

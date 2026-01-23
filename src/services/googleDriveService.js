@@ -25,7 +25,6 @@ class GoogleDriveService {
         scopes: [GOOGLE_DRIVE_SCOPE],
         offlineAccess: true,
       });
-      console.log('GoogleSignin configured successfully');
     } catch (error) {
       console.warn('Warning configuring GoogleSignin (may be normal during first load):', error.message);
       // This can happen during initial app load - it's not critical
@@ -53,8 +52,6 @@ class GoogleDriveService {
   // Authenticate with Google using native sign-in
   async authenticate() {
     try {
-      console.log('Starting native Google Sign-In...');
-      
       try {
         await GoogleSignin.hasPlayServices();
       } catch (error) {
@@ -66,8 +63,6 @@ class GoogleDriveService {
       if (!userInfo) {
         throw new Error('No user info returned from Google Sign-In');
       }
-      
-      console.log('Sign-in successful:', userInfo.user?.email || 'unknown user');
       
       // Get tokens
       let tokens;
@@ -81,8 +76,6 @@ class GoogleDriveService {
       if (!tokens.accessToken) {
         throw new Error('No access token received');
       }
-      
-      console.log('Tokens received');
       
       this.accessToken = tokens.accessToken;
       this.idToken = tokens.idToken || '';
@@ -103,7 +96,6 @@ class GoogleDriveService {
     try {
       await AsyncStorage.setItem(STORAGE_KEY_ACCESS_TOKEN, this.accessToken);
       await AsyncStorage.setItem(STORAGE_KEY_ID_TOKEN, this.idToken);
-      console.log('Tokens saved to storage');
     } catch (error) {
       console.error('Error saving tokens:', error);
     }
@@ -135,7 +127,7 @@ class GoogleDriveService {
           }
         }
       } catch (userError) {
-        console.log('No current user, checking storage...');
+        // ignore
       }
       
       // Fallback: check stored tokens
@@ -160,8 +152,6 @@ class GoogleDriveService {
       this.accessToken = null;
       this.idToken = null;
       this.userInfo = null;
-      
-      console.log('Signed out successfully');
       return true;
     } catch (error) {
       console.error('Error signing out:', error);
@@ -197,7 +187,6 @@ class GoogleDriveService {
       }
 
       const data = await response.json();
-      console.log('Backup folder created:', data.id);
       return data.id;
     } catch (error) {
       console.error('Error creating backup folder:', error);
@@ -209,12 +198,10 @@ class GoogleDriveService {
   // Refresh access token
   async refreshAccessToken() {
     try {
-      console.log('Refreshing access token...');
       const tokens = await GoogleSignin.getTokens();
       this.accessToken = tokens.accessToken;
       this.idToken = tokens.idToken;
       await this.saveTokens();
-      console.log('✓ Access token refreshed');
       return true;
     } catch (error) {
       console.error('Error refreshing token:', error);
@@ -240,7 +227,6 @@ class GoogleDriveService {
 
       if (searchResponse.status === 401) {
         // Token expired, refresh and retry
-        console.log('Access token expired (401), refreshing...');
         const refreshed = await this.refreshAccessToken();
         if (refreshed) {
           return await this.getOrCreateBackupFolder();
@@ -256,7 +242,6 @@ class GoogleDriveService {
       const searchData = await searchResponse.json();
 
       if (searchData.files && searchData.files.length > 0) {
-        console.log('Found existing backup folder:', searchData.files[0].id);
         return searchData.files[0].id;
       }
 
@@ -282,7 +267,6 @@ class GoogleDriveService {
       try {
         const existingBackups = await this.listBackups();
         for (const backup of existingBackups) {
-          console.log('Deleting existing backup:', backup.id);
           await this.deleteBackup(backup.id);
         }
       } catch (error) {
@@ -323,32 +307,12 @@ class GoogleDriveService {
 
       const fileInfo = await createResponse.json();
       const fileId = fileInfo.id;
-      console.log('Backup file created with ID:', fileId);
 
       // Step 2: Upload content to the dedicated upload endpoint
       // entries parameter already contains the full exported data structure
       const fileContent = JSON.stringify(entries);
       const parsedContent = JSON.parse(fileContent);
       
-      console.log('=== BACKUP UPLOAD DEBUG ===');
-      console.log('Uploading backup with structure:', {
-        keys: Object.keys(parsedContent),
-        hasEntries: !!parsedContent.entries,
-        hasTags: !!parsedContent.tags,
-        hasEntryTags: !!parsedContent.entryTags,
-        entriesLength: parsedContent.entries?.length,
-        tagsLength: parsedContent.tags?.length,
-        entryTagsLength: parsedContent.entryTags?.length,
-      });
-      
-      if (parsedContent.entries?.length > 0) {
-        console.log('Entry details:', parsedContent.entries.map(e => ({
-          id: e.id,
-          title: e.title,
-          date: e.date
-        })));
-      }
-      console.log('=== BACKUP UPLOAD DEBUG END ===');
 
       const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
       const uploadResponse = await fetch(uploadUrl, {
@@ -366,7 +330,6 @@ class GoogleDriveService {
         throw new Error(`Failed to upload backup content: ${uploadResponse.status}`);
       }
 
-      console.log('Backup created successfully:', fileId);
       return fileId;
     } catch (error) {
       console.error('Error backing up journal:', error);
@@ -389,7 +352,6 @@ class GoogleDriveService {
       const folderId = await this.getOrCreateBackupFolder();
       const fileIds = [];
 
-      console.log(`Backing up ${selectedEntries.length} selected entries...`);
 
       // Backup each entry individually
       for (const entryData of selectedEntries) {
@@ -448,7 +410,6 @@ class GoogleDriveService {
             throw new Error(`Failed to upload backup for entry ${entryId}`);
           }
 
-          console.log(`✓ Backed up entry ${entryId} as: ${fileName}`);
           fileIds.push(fileId);
         } catch (entryError) {
           console.error(`Error backing up entry ${entryData.id}:`, entryError);
@@ -456,7 +417,6 @@ class GoogleDriveService {
         }
       }
 
-      console.log(`✓ Successfully backed up ${fileIds.length}/${selectedEntries.length} entries`);
       return fileIds;
     } catch (error) {
       console.error('Error backing up selected entries:', error);
@@ -485,7 +445,6 @@ class GoogleDriveService {
       );
 
       if (response.status === 401) {
-        console.log('Access token expired (401), refreshing and retrying...');
         const refreshed = await this.refreshAccessToken();
         if (refreshed) {
           return await this.listBackups();
@@ -497,7 +456,6 @@ class GoogleDriveService {
       }
 
       const data = await response.json();
-      console.log('Backups found:', data.files?.length || 0);
       return data.files || [];
     } catch (error) {
       console.error('Error listing backups:', error);
@@ -529,16 +487,6 @@ class GoogleDriveService {
       
       // Parse the JSON directly
       const data = JSON.parse(text);
-      console.log('Backup downloaded successfully');
-      console.log('Downloaded backup structure:', {
-        keys: Object.keys(data),
-        hasEntries: !!data.entries,
-        hasTags: !!data.tags,
-        hasEntryTags: !!data.entryTags,
-        entriesLength: data.entries?.length,
-        tagsLength: data.tags?.length,
-        entryTagsLength: data.entryTags?.length
-      });
       return data;
     } catch (error) {
       console.error('Error downloading backup:', error);
@@ -564,7 +512,6 @@ class GoogleDriveService {
         throw new Error(`Failed to delete backup: ${response.status}`);
       }
 
-      console.log('Backup deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting backup:', error);
