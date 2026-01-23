@@ -356,14 +356,24 @@ class GoogleDriveService {
       // Backup each entry individually
       for (const entryData of selectedEntries) {
         try {
-          const entryId = entryData.id;
-          const entryTitle = entryData.title || `Entry`;
+          // Extract the actual entry from the backup structure
+          const actualEntry = entryData.entries?.[0];
+          if (!actualEntry) {
+            console.error('Invalid entry data structure:', entryData);
+            continue;
+          }
+          
+          const entryId = actualEntry.id;
+          const entryTitle = actualEntry.title?.trim() || 'Untitled';
+          
+          // Sanitize title for filename (remove special characters)
+          const sanitizedTitle = entryTitle.substring(0, 50).replace(/[<>:"/\\|?*]/g, '_');
 
           // Create human-readable date format
           const now = new Date();
           const dateStr = now.toISOString().replace(/[:.]/g, '-').split('T')[0];
           const timeStr = now.toISOString().split('T')[1].split('.')[0].replace(/:/g, '-');
-          const fileName = `Backup_${entryTitle.substring(0, 20) || 'Entry'}_${entryId}_${dateStr}_${timeStr}.json`;
+          const fileName = `${sanitizedTitle}_${dateStr}_${timeStr}.json`;
 
           // Create file with metadata
           const metadata = {
@@ -412,7 +422,7 @@ class GoogleDriveService {
 
           fileIds.push(fileId);
         } catch (entryError) {
-          console.error(`Error backing up entry ${entryData.id}:`, entryError);
+          console.error(`Error backing up entry:`, entryError);
           // Continue with other entries
         }
       }
@@ -434,9 +444,9 @@ class GoogleDriveService {
       // Get the backup folder first
       const folderId = await this.getOrCreateBackupFolder();
 
-      // Search for backup files in the folder by name pattern
+      // Search for backup files in the folder (all .json files)
       const response = await fetch(
-        `${GOOGLE_DRIVE_API}/files?q=name contains 'Backup_' and '${folderId}' in parents and trashed=false&spaces=drive&orderBy=createdTime desc`,
+        `${GOOGLE_DRIVE_API}/files?q='${folderId}' in parents and mimeType='application/json' and trashed=false&spaces=drive&orderBy=createdTime desc`,
         {
           headers: {
             'Authorization': `Bearer ${this.accessToken}`,

@@ -589,7 +589,7 @@ const cloudSyncStyles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 14,
         borderRadius: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        backgroundColor: 'rgba(214, 63, 63, 0.15)',
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.3)',
     },
