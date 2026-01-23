@@ -453,15 +453,27 @@ export const exportAllData = async () => {
       SELECT * FROM journal_entries ORDER BY date DESC
     `);
     
+    console.log('=== EXPORT DEBUG ===');
+    console.log('Total entries found:', entries.length);
+    if (entries.length > 0) {
+      console.log('Entry IDs:', entries.map(e => e.id));
+      console.log('Entry titles:', entries.map(e => e.title));
+    }
+    
     // Get all tags
     const tags = await db.getAllAsync(`
       SELECT * FROM tags ORDER BY name ASC
     `);
     
+    console.log('Total tags found:', tags.length);
+    
     // Get all entry-tag associations
     const entryTags = await db.getAllAsync(`
       SELECT * FROM entry_tags
     `);
+    
+    console.log('Total entry-tag associations:', entryTags.length);
+    console.log('=== EXPORT DEBUG END ===');
     
     // Parse images JSON for each entry
     const entriesWithParsedImages = entries.map(entry => ({
@@ -586,6 +598,62 @@ export const importAllData = async (backup) => {
   } catch (error) {
     console.error('✗ Error importing data:', error);
     console.error('Error stack:', error.stack);
+    throw error;
+  }
+};
+
+// Export a single entry for backup
+export const exportSingleEntry = async (entryId) => {
+  try {
+    const db = await getDBInstance();
+    
+    // Get the specific journal entry
+    const entry = await db.getFirstAsync(`
+      SELECT * FROM journal_entries WHERE id = ?
+    `, [entryId]);
+    
+    if (!entry) {
+      throw new Error(`Entry with ID ${entryId} not found`);
+    }
+    
+    // Get tags for this entry
+    const entryTags = await db.getAllAsync(`
+      SELECT * FROM entry_tags WHERE entryId = ?
+    `, [entryId]);
+    
+    // Get the tag details
+    const tagIds = entryTags.map(et => et.tagId);
+    let tags = [];
+    if (tagIds.length > 0) {
+      const placeholders = tagIds.map(() => '?').join(',');
+      tags = await db.getAllAsync(`
+        SELECT * FROM tags WHERE id IN (${placeholders})
+      `, tagIds);
+    }
+    
+    // Parse images
+    const entryWithImages = {
+      ...entry,
+      images: entry.images ? JSON.parse(entry.images) : []
+    };
+    
+    const backup = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      entries: [entryWithImages],
+      tags,
+      entryTags
+    };
+    
+    console.log(`Exported single entry ${entryId}:`, {
+      entries: 1,
+      tags: tags.length,
+      entryTags: entryTags.length
+    });
+    
+    return backup;
+  } catch (error) {
+    console.error('Error exporting single entry:', error);
     throw error;
   }
 };

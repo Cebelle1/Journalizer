@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 // Asset and Styles
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
 import { tagStylesJournalScreen, entryStyles, deleteStyle, navigatorStyles, headerSearchStyles, fabStyles, emptyStateStyles } from '../styles/componentStyle';
 
@@ -19,14 +20,18 @@ import TagList from '../components/TagList';
 import SearchModal from '../components/SearchModal';
 
 // Database
-import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries } from '../database/journalDB';
+import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries, exportSingleEntry } from '../database/journalDB';
+import googleDriveService from '../services/googleDriveService';
 
 export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [longPressedItem, setLongPressedItem] = useState(null); // Tracks long-pressed item ID
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchInput, setSearchInput] = useState('');
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedEntries, setSelectedEntries] = useState(new Set());
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [filters, setFilters] = useState({
     dateRange: { startDate: null, endDate: null},
     tags: [],
@@ -36,6 +41,8 @@ export default function JournalScreen({ navigation }) {
   const onSearch = useCallback(() => {
     setSearchModalVisible(true);
   }, []);
+
+  const totalEntriesCount = journalEntries.reduce((sum, group) => sum + (group.entries?.length || 0), 0);
 
   const clearFilters = useCallback(() => {
     console.log('Clearing filters');
@@ -74,7 +81,7 @@ export default function JournalScreen({ navigation }) {
         filterComponents.push(
           <Text key="title">
             <Text style={{ color: '#999', fontSize: 13 }}>title: </Text>
-            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>"{filters.searchTitle}"</Text>
+            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>&quot;{filters.searchTitle}&quot;</Text>
           </Text>
         );
       }
@@ -102,6 +109,88 @@ export default function JournalScreen({ navigation }) {
           </Text>
         );
       }
+    }
+
+    if (isSelectionMode) {
+      navigation.setOptions({
+        headerTitle: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <View style={{
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 12,
+              backgroundColor: themeStyle.lightPurple1,
+              minWidth: 72,
+              alignItems: 'center',
+            }}>
+              <Text style={{ color: themeStyle.darkPurple2, fontFamily: 'Montserrat-SemiBold', fontSize: 15 }}>
+                {selectedEntries.size}/{totalEntriesCount || 0}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <TouchableOpacity
+                onPress={handleDeleteSelected}
+                disabled={isDeleting || selectedEntries.size === 0}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: '#ff6b6b',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: isDeleting || selectedEntries.size === 0 ? 0.5 : 1,
+                }}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color={themeStyle.white} />
+                ) : (
+                  <Ionicons name="trash-outline" size={18} color={themeStyle.white} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleBackupSelected}
+                disabled={isBackingUp || selectedEntries.size === 0}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: themeStyle.darkPurple2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: isBackingUp || selectedEntries.size === 0 ? 0.5 : 1,
+                }}
+              >
+                {isBackingUp ? (
+                  <ActivityIndicator size="small" color={themeStyle.white} />
+                ) : (
+                  <Ionicons name="cloud-upload-outline" size={18} color={themeStyle.white} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsSelectionMode(false);
+                  setSelectedEntries(new Set());
+                }}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: themeStyle.lightGrey2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="close" size={18} color={themeStyle.black} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ),
+        headerShown: true,
+        headerStyle: [navigatorStyles.headerStyle, {height: 45}],
+        headerLeft: null,
+        headerRight: null,
+      });
+      return;
     }
 
     navigation.setOptions({
@@ -145,7 +234,7 @@ export default function JournalScreen({ navigation }) {
       headerLeft: null,
       headerRight: null,
     });
-  }, [navigation, hasActiveFilters, clearFilters, searchInput, filters]);
+  }, [navigation, hasActiveFilters, clearFilters, searchInput, filters, isSelectionMode, selectedEntries, totalEntriesCount, isDeleting, isBackingUp]);
 
   // Function to load and group entries
   const loadEntries = useCallback(async () => {
@@ -264,16 +353,128 @@ export default function JournalScreen({ navigation }) {
       'Delete Entry',
       'Are you sure you want to delete this entry? \n Title: ' + entry.title + '\n Date: ' + formatYearMonthDayTime(entry.date),
       [
-        { text: 'Cancel', style: 'cancel', onPress: () => { setLongPressedItem(null); } },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           onPress: () => {
             deleteSelectedJournalEntry(entry.id);
-            setLongPressedItem(null); // Reset long press state
           },
         },
       ],
       { cancelable: true }
+    );
+  };
+
+  const toggleSelection = (entryId) => {
+    const newSelected = new Set(selectedEntries);
+    if (newSelected.has(entryId)) {
+      newSelected.delete(entryId);
+    } else {
+      newSelected.add(entryId);
+    }
+    setSelectedEntries(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedEntries.size === 0) {
+      Alert.alert('No Selection', 'Please select at least one entry to delete');
+      return;
+    }
+
+    Alert.alert(
+      'Delete Selected Entries',
+      `Delete ${selectedEntries.size} selected entries? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              // Delete each selected entry
+              for (const entryId of selectedEntries) {
+                try {
+                  await deleteJournalEntry(entryId);
+                } catch (error) {
+                  console.error(`Failed to delete entry ${entryId}:`, error);
+                }
+              }
+
+              Alert.alert('Success', `Deleted ${selectedEntries.size} entries`);
+              
+              // Clear selection and exit selection mode
+              setSelectedEntries(new Set());
+              setIsSelectionMode(false);
+              
+              // Reload entries
+              loadEntries();
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete entries: ' + error.message);
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+          style: 'destructive',
+        }
+      ]
+    );
+  };
+
+  const handleBackupSelected = async () => {
+    if (selectedEntries.size === 0) {
+      Alert.alert('No Selection', 'Please select at least one entry to backup');
+      return;
+    }
+
+    Alert.alert(
+      'Backup Selected Entries',
+      `Backup ${selectedEntries.size} selected entries to Google Drive?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Backup',
+          onPress: async () => {
+            setIsBackingUp(true);
+            try {
+              const isAuthenticated = await googleDriveService.isAuthenticated();
+              if (!isAuthenticated) {
+                Alert.alert('Not Authenticated', 'Please sign in to Google Drive first');
+                setIsBackingUp(false);
+                return;
+              }
+
+              // Export each selected entry and get backup data
+              const backupDataList = [];
+              for (const entryId of selectedEntries) {
+                try {
+                  const backupData = await exportSingleEntry(entryId);
+                  backupDataList.push(backupData);
+                } catch (error) {
+                  console.error(`Failed to export entry ${entryId}:`, error);
+                }
+              }
+
+              if (backupDataList.length === 0) {
+                Alert.alert('Error', 'Failed to prepare entries for backup');
+                return;
+              }
+
+              const fileIds = await googleDriveService.backupSelectedEntries(backupDataList);
+              Alert.alert('Success', `Backed up ${fileIds.length} entries to Google Drive`);
+              
+              // Clear selection and exit selection mode
+              setSelectedEntries(new Set());
+              setIsSelectionMode(false);
+            } catch (error) {
+              console.error('Backup error:', error);
+              Alert.alert('Error', 'Failed to backup entries: ' + error.message);
+            } finally {
+              setIsBackingUp(false);
+            }
+          }
+        }
+      ]
     );
   };
 
@@ -286,51 +487,62 @@ export default function JournalScreen({ navigation }) {
     }
 
     const entry = item; // Individual journal entry
-    const isItemLongPressed = longPressedItem === entry.id;
+    const isSelected = selectedEntries.has(entry.id);
 
-    {/* Delete Journal Entry long press logic*/}
+    {/* Delete Journal Entry long press logic or Selection mode*/}
     return (
       <TouchableOpacity
         key={entry.id}
-        style={[styles.entry, isItemLongPressed && deleteStyle.deleteEntry]} 
-        onLongPress={() => setLongPressedItem(entry.id)} // Set long-pressed item
+        style={[styles.entry, isSelected && { backgroundColor: themeStyle.lightPurple1 }]} 
+        onLongPress={() => {
+          if (!isSelectionMode) {
+            setIsSelectionMode(true);
+            toggleSelection(entry.id);
+          }
+        }}
         onPress={() => {
-          if (longPressedItem && longPressedItem === entry.id) {
-            handleDeletePress(entry); // Delete on long press
-          } else if (longPressedItem && longPressedItem !== entry.id) {
-            setLongPressedItem(null); // Reset long press state
+          if (isSelectionMode) {
+            toggleSelection(entry.id);
           } else {
             navigation.navigate('Journal Entry', { id: entry.id });
           }
         }}
       >
-        {isItemLongPressed ? (
-          <Ionicons name="trash-outline" size={24} color="black" onPress={() => handleDeletePress(entry)} />
-        ) : (
-          <View>
-            {/* Title and Date */}
-            <View style={styles.entryTextContainer}>
-              <Text style={styles.entryTextTitle} numberOfLines={1}>
-                {entry.title}
-              </Text>
-              <Text style={styles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          {isSelectionMode && (
+            <MaterialIcon
+              name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
+              size={24}
+              color={themeStyle.darkPurple2}
+              style={{ marginRight: 10, marginTop: 5 }}
+            />
+          )}
+          <View style={{ flex: 1 }}>
+            <View>
+                {/* Title and Date */}
+                <View style={styles.entryTextContainer}>
+                  <Text style={styles.entryTextTitle} numberOfLines={1}>
+                    {entry.title}
+                  </Text>
+                  <Text style={styles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
+                </View>
+
+                {/* Tags */}
+                <View style={styles.entryTextContainer}>
+                  <TagList
+                    tags={entry.tags || []}
+                    style={tagStylesJournalScreen} />
+                </View>
+
+                <View style={entryStyles.divider} />
+
+                {/* Body */ }
+                <Text style={styles.entryText} numberOfLines={6}>
+                  {entry.body}
+                </Text>
             </View>
-
-            {/* Tags */}
-            <View style={styles.entryTextContainer}>
-              <TagList
-                tags={entry.tags || []}
-                style={tagStylesJournalScreen} />
-            </View>
-
-            <View style={entryStyles.divider} />
-
-            {/* Body */ }
-            <Text style={styles.entryText} numberOfLines={6}>
-              {entry.body}
-            </Text>
           </View>
-        )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -346,6 +558,9 @@ export default function JournalScreen({ navigation }) {
 
   return (
     <ThemeBackground>
+      {/* Header with Select/Backup buttons when in selection mode */}
+      {/* Selection header now lives in navigation bar; no extra in-content bar */}
+
       {flatListData.length === 0 ? (
         <View style={emptyStateStyles.emptyContainer}>
           <Ionicons name="document-text" size={64} color="#ccc" />

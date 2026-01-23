@@ -13,7 +13,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
 import MaterialIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { ThemeBackground, themeStyle } from '../styles/theme';
-import { exportAllData, importAllData } from '../database/journalDB';
+import { exportAllData, exportSingleEntry, importAllData } from '../database/journalDB';
 import googleDriveService from '../services/googleDriveService';
 import { format } from 'date-fns';
 
@@ -115,13 +115,36 @@ export default function CloudSyncScreen() {
     const handleBackup = async () => {
         setIsLoading(true);
         try {
-            // Export data from database
-            const data = await exportAllData();
+            // Export all data from database
+            const allData = await exportAllData();
             
-            // Use the backupJournal method from service
-            await googleDriveService.backupJournal(data);
+            if (!allData.entries || allData.entries.length === 0) {
+                Alert.alert('No Entries', 'No journal entries to backup');
+                setIsLoading(false);
+                return;
+            }
+
+            // Export each entry individually for backup
+            const backupDataList = [];
+            for (const entry of allData.entries) {
+                try {
+                    const backupData = await exportSingleEntry(entry.id);
+                    backupDataList.push(backupData);
+                } catch (error) {
+                    console.error(`Failed to export entry ${entry.id}:`, error);
+                }
+            }
+
+            if (backupDataList.length === 0) {
+                Alert.alert('Error', 'Failed to prepare entries for backup');
+                setIsLoading(false);
+                return;
+            }
+
+            // Backup each entry as individual file
+            const fileIds = await googleDriveService.backupSelectedEntries(backupDataList);
             
-            Alert.alert('Success', 'Backup completed successfully!');
+            Alert.alert('Success', `Backed up ${fileIds.length} journal entries individually`);
             await loadBackupFiles();
         } catch (error) {
             console.error('Backup error:', error);
@@ -131,18 +154,15 @@ export default function CloudSyncScreen() {
         }
     };
 
-    const handleRestoreLatest = async () => {
+    const handleRestoreAll = async () => {
         if (backupFiles.length === 0) {
             Alert.alert('No Backups', 'No backups found in Google Drive');
             return;
         }
 
-        // Get the most recent backup (already sorted by creation time)
-        const latestBackup = backupFiles[0];
-
         Alert.alert(
-            'Restore Latest Backup',
-            `Restore from "${latestBackup.name}"?\n\nThis will merge your local entries with the backup. Local entries not in the backup will be kept.`,
+            'Restore All Backups',
+            `Restore all ${backupFiles.length} backups?\n\nEach backup will be merged; local-only entries are kept.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -150,19 +170,23 @@ export default function CloudSyncScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         setIsLoading(true);
+                        let restoredCount = 0;
                         try {
-                            // Download file from Google Drive
-                            const backupData = await googleDriveService.downloadBackup(latestBackup.id);
-                            
-                            // Import into database - pass the entire backup object
-                            await importAllData(backupData);
-                            
-                            Alert.alert('Success', 'Backup restored successfully!');
-                            // Reload backup files to reflect changes
+                            for (const file of backupFiles) {
+                                try {
+                                    const backupData = await googleDriveService.downloadBackup(file.id);
+                                    await importAllData(backupData);
+                                    restoredCount += 1;
+                                } catch (error) {
+                                    console.error(`Restore failed for ${file.name}:`, error);
+                                }
+                            }
+
+                            Alert.alert('Restore Complete', `Restored ${restoredCount} of ${backupFiles.length} backups`);
                             await loadBackupFiles();
                         } catch (error) {
                             console.error('Restore error:', error);
-                            Alert.alert('Error', 'Failed to restore backup: ' + error.message);
+                            Alert.alert('Error', 'Failed to restore backups: ' + error.message);
                         } finally {
                             setIsLoading(false);
                         }
@@ -371,7 +395,7 @@ export default function CloudSyncScreen() {
 
                             <TouchableOpacity 
                                 style={[cloudSyncStyles.actionCard, backupFiles.length === 0 && cloudSyncStyles.disabledCard]}
-                                onPress={handleRestoreLatest}
+                                onPress={handleRestoreAll}
                                 disabled={isLoading || backupFiles.length === 0}
                             >
                                 {isLoading ? (

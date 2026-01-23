@@ -112,15 +112,30 @@ class GoogleDriveService {
   // Check if authenticated
   async isAuthenticated() {
     try {
-      // Try to get current user - if it succeeds, they're signed in
-      const userInfo = await GoogleSignin.getCurrentUser();
-      if (userInfo) {
-        this.userInfo = userInfo;
-        // Get fresh tokens
-        const tokens = await GoogleSignin.getTokens();
-        this.accessToken = tokens.accessToken;
-        this.idToken = tokens.idToken;
+      // If we already have valid access token, use it
+      if (this.accessToken) {
         return true;
+      }
+      
+      // Try to get current user
+      try {
+        const userInfo = await GoogleSignin.getCurrentUser();
+        if (userInfo) {
+          this.userInfo = userInfo;
+          // Get fresh tokens
+          try {
+            const tokens = await GoogleSignin.getTokens();
+            this.accessToken = tokens.accessToken;
+            this.idToken = tokens.idToken;
+            return true;
+          } catch (tokenError) {
+            console.error('Error getting tokens:', tokenError);
+            // Try initialize from storage
+            return await this.initialize();
+          }
+        }
+      } catch (userError) {
+        console.log('No current user, checking storage...');
       }
       
       // Fallback: check stored tokens
@@ -128,8 +143,7 @@ class GoogleDriveService {
       return initialized;
     } catch (error) {
       console.error('Error checking authentication:', error);
-      // If error, try to initialize from storage
-      return await this.initialize();
+      return false;
     }
   }
 
@@ -192,6 +206,22 @@ class GoogleDriveService {
   }
 
   // Find or create backup folder
+  // Refresh access token
+  async refreshAccessToken() {
+    try {
+      console.log('Refreshing access token...');
+      const tokens = await GoogleSignin.getTokens();
+      this.accessToken = tokens.accessToken;
+      this.idToken = tokens.idToken;
+      await this.saveTokens();
+      console.log('✓ Access token refreshed');
+      return true;
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      return false;
+    }
+  }
+
   async getOrCreateBackupFolder() {
     try {
       if (!this.accessToken) {
@@ -207,6 +237,17 @@ class GoogleDriveService {
           },
         }
       );
+
+      if (searchResponse.status === 401) {
+        // Token expired, refresh and retry
+        console.log('Access token expired (401), refreshing...');
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          return await this.getOrCreateBackupFolder();
+        } else {
+          throw new Error('Failed to refresh token');
+        }
+      }
 
       if (!searchResponse.ok) {
         throw new Error(`Failed to search for backup folder: ${searchResponse.status}`);
@@ -287,14 +328,27 @@ class GoogleDriveService {
       // Step 2: Upload content to the dedicated upload endpoint
       // entries parameter already contains the full exported data structure
       const fileContent = JSON.stringify(entries);
+      const parsedContent = JSON.parse(fileContent);
       
+      console.log('=== BACKUP UPLOAD DEBUG ===');
       console.log('Uploading backup with structure:', {
-        keys: Object.keys(JSON.parse(fileContent)),
-        hasEntries: !!JSON.parse(fileContent).entries,
-        hasTags: !!JSON.parse(fileContent).tags,
-        hasEntryTags: !!JSON.parse(fileContent).entryTags,
-        entriesLength: JSON.parse(fileContent).entries?.length,
+        keys: Object.keys(parsedContent),
+        hasEntries: !!parsedContent.entries,
+        hasTags: !!parsedContent.tags,
+        hasEntryTags: !!parsedContent.entryTags,
+        entriesLength: parsedContent.entries?.length,
+        tagsLength: parsedContent.tags?.length,
+        entryTagsLength: parsedContent.entryTags?.length,
       });
+      
+      if (parsedContent.entries?.length > 0) {
+        console.log('Entry details:', parsedContent.entries.map(e => ({
+          id: e.id,
+          title: e.title,
+          date: e.date
+        })));
+      }
+      console.log('=== BACKUP UPLOAD DEBUG END ===');
 
       const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
       const uploadResponse = await fetch(uploadUrl, {
@@ -320,6 +374,96 @@ class GoogleDriveService {
     }
   }
 
+  // Backup multiple selected entries (each as individual file)
+  async backupSelectedEntries(selectedEntries) {
+    try {
+      if (!this.accessToken) {
+        throw new Error('Not authenticated');
+      }
+
+      if (!selectedEntries || selectedEntries.length === 0) {
+        throw new Error('No entries selected for backup');
+      }
+
+      // Get or create backup folder
+      const folderId = await this.getOrCreateBackupFolder();
+      const fileIds = [];
+
+      console.log(`Backing up ${selectedEntries.length} selected entries...`);
+
+      // Backup each entry individually
+      for (const entryData of selectedEntries) {
+        try {
+          const entryId = entryData.id;
+          const entryTitle = entryData.title || `Entry`;
+
+          // Create human-readable date format
+          const now = new Date();
+          const dateStr = now.toISOString().replace(/[:.]/g, '-').split('T')[0];
+          const timeStr = now.toISOString().split('T')[1].split('.')[0].replace(/:/g, '-');
+          const fileName = `Backup_${entryTitle.substring(0, 20) || 'Entry'}_${entryId}_${dateStr}_${timeStr}.json`;
+
+          // Create file with metadata
+          const metadata = {
+            name: fileName,
+            mimeType: 'application/json',
+            parents: [folderId],
+            appProperties: {
+              app: 'journalizer',
+              type: 'backup-entry',
+              entryId: String(entryId),
+            },
+          };
+
+          const createResponse = await fetch(`${GOOGLE_DRIVE_API}/files`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(metadata),
+          });
+
+          if (!createResponse.ok) {
+            throw new Error(`Failed to create backup file for entry ${entryId}`);
+          }
+
+          const fileInfo = await createResponse.json();
+          const fileId = fileInfo.id;
+
+          // Upload content
+          const fileContent = JSON.stringify(entryData);
+
+          const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
+          const uploadResponse = await fetch(uploadUrl, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${this.accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: fileContent,
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Failed to upload backup for entry ${entryId}`);
+          }
+
+          console.log(`✓ Backed up entry ${entryId} as: ${fileName}`);
+          fileIds.push(fileId);
+        } catch (entryError) {
+          console.error(`Error backing up entry ${entryData.id}:`, entryError);
+          // Continue with other entries
+        }
+      }
+
+      console.log(`✓ Successfully backed up ${fileIds.length}/${selectedEntries.length} entries`);
+      return fileIds;
+    } catch (error) {
+      console.error('Error backing up selected entries:', error);
+      throw error;
+    }
+  }
+
   // List all backups in Google Drive
   async listBackups() {
     try {
@@ -339,6 +483,14 @@ class GoogleDriveService {
           },
         }
       );
+
+      if (response.status === 401) {
+        console.log('Access token expired (401), refreshing and retrying...');
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          return await this.listBackups();
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to list backups: ${response.status}`);
