@@ -131,10 +131,51 @@ export default function CloudSyncScreen() {
         }
     };
 
+    const handleRestoreLatest = async () => {
+        if (backupFiles.length === 0) {
+            Alert.alert('No Backups', 'No backups found in Google Drive');
+            return;
+        }
+
+        // Get the most recent backup (already sorted by creation time)
+        const latestBackup = backupFiles[0];
+
+        Alert.alert(
+            'Restore Latest Backup',
+            `Restore from "${latestBackup.name}"?\n\nThis will merge your local entries with the backup. Local entries not in the backup will be kept.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Restore',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setIsLoading(true);
+                        try {
+                            // Download file from Google Drive
+                            const backupData = await googleDriveService.downloadBackup(latestBackup.id);
+                            
+                            // Import into database - pass the entire backup object
+                            await importAllData(backupData);
+                            
+                            Alert.alert('Success', 'Backup restored successfully!');
+                            // Reload backup files to reflect changes
+                            await loadBackupFiles();
+                        } catch (error) {
+                            console.error('Restore error:', error);
+                            Alert.alert('Error', 'Failed to restore backup: ' + error.message);
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const handleRestore = async (fileId, fileName) => {
         Alert.alert(
             'Restore Backup',
-            `Are you sure you want to restore from "${fileName}"?\n\nThis will replace the current journal entry!`,
+            `Are you sure you want to restore from "${fileName}"?\n\nThis will merge your local entries with the backup. Local entries not in the backup will be kept.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -328,11 +369,29 @@ export default function CloudSyncScreen() {
                                 )}
                             </TouchableOpacity>
 
-                            <View style={[cloudSyncStyles.actionCard, cloudSyncStyles.disabledCard]}>
-                                <MaterialIcon name="cloud-download-outline" size={32} color={themeStyle.darkGrey1} />
-                                <Text style={[cloudSyncStyles.actionCardTitle, { color: themeStyle.darkGrey1 }]}>Restore</Text>
-                                <Text style={[cloudSyncStyles.actionCardSubtitle, { color: themeStyle.darkGrey1 }]}>Coming soon</Text>
-                            </View>
+                            <TouchableOpacity 
+                                style={[cloudSyncStyles.actionCard, backupFiles.length === 0 && cloudSyncStyles.disabledCard]}
+                                onPress={handleRestoreLatest}
+                                disabled={isLoading || backupFiles.length === 0}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color={themeStyle.darkPurple2} size="large" />
+                                ) : (
+                                    <>
+                                        <MaterialIcon 
+                                            name="cloud-download-outline" 
+                                            size={32} 
+                                            color={backupFiles.length === 0 ? themeStyle.darkGrey1 : themeStyle.darkPurple2} 
+                                        />
+                                        <Text style={[cloudSyncStyles.actionCardTitle, backupFiles.length === 0 && { color: themeStyle.darkGrey1 }]}>
+                                            Restore All
+                                        </Text>
+                                        <Text style={[cloudSyncStyles.actionCardSubtitle, backupFiles.length === 0 && { color: themeStyle.darkGrey1 }]}>
+                                            {backupFiles.length === 0 ? 'No backups' : 'Latest backup'}
+                                        </Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
