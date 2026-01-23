@@ -234,11 +234,19 @@ class GoogleDriveService {
         throw new Error('Not authenticated');
       }
 
-      const backupData = {
-        timestamp: new Date().toISOString(),
-        entries: entries,
-        version: 1,
-      };
+      // Get or create backup folder
+      const folderId = await this.getOrCreateBackupFolder();
+
+      // Delete existing backups to keep only one backup
+      try {
+        const existingBackups = await this.listBackups();
+        for (const backup of existingBackups) {
+          console.log('Deleting existing backup:', backup.id);
+          await this.deleteBackup(backup.id);
+        }
+      } catch (error) {
+        console.warn('Could not delete existing backups:', error.message);
+      }
 
       // Create human-readable date format: YYYY-MM-DD_HH-mm-ss
       const now = new Date();
@@ -246,57 +254,66 @@ class GoogleDriveService {
       const timeStr = now.toISOString().split('T')[1].split('.')[0].replace(/:/g, '-');
       const fileName = `Backup_${dateStr}_${timeStr}.json`;
 
-      // Get or create backup folder
-      const folderId = await this.getOrCreateBackupFolder();
-
-      // Create file metadata
-      const fileMetadata = {
+      // Step 1: Create file with metadata only
+      const metadata = {
         name: fileName,
         mimeType: 'application/json',
         parents: [folderId],
-        properties: {
+        appProperties: {
           app: 'journalizer',
           type: 'backup',
         },
       };
 
-      // Upload with multipart: Create file with content in one request
-      const fileContent = JSON.stringify(backupData);
-      const boundary = '===============7330845974216740156==';
-      
-      let multipartBody = '';
-      multipartBody += `--${boundary}\r\n`;
-      multipartBody += 'Content-Type: application/json; charset=UTF-8\r\n\r\n';
-      multipartBody += JSON.stringify(fileMetadata);
-      multipartBody += '\r\n\r\n';
-      
-      multipartBody += `--${boundary}\r\n`;
-      multipartBody += 'Content-Type: application/json\r\n\r\n';
-      multipartBody += fileContent;
-      multipartBody += '\r\n';
-      multipartBody += `--${boundary}--`;
+      const createResponse = await fetch(`${GOOGLE_DRIVE_API}/files`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(metadata),
+      });
 
-      const uploadResponse = await fetch(
-        `${GOOGLE_DRIVE_API}/files?uploadType=multipart`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
-            'Content-Type': `multipart/related; boundary="${boundary}"`,
-          },
-          body: multipartBody,
-        }
-      );
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        console.error('Create file error:', errorText);
+        throw new Error(`Failed to create backup file: ${createResponse.status}`);
+      }
+
+      const fileInfo = await createResponse.json();
+      const fileId = fileInfo.id;
+      console.log('Backup file created with ID:', fileId);
+
+      // Step 2: Upload content to the dedicated upload endpoint
+      // entries parameter already contains the full exported data structure
+      const fileContent = JSON.stringify(entries);
+      
+      console.log('Uploading backup with structure:', {
+        keys: Object.keys(JSON.parse(fileContent)),
+        hasEntries: !!JSON.parse(fileContent).entries,
+        hasTags: !!JSON.parse(fileContent).tags,
+        hasEntryTags: !!JSON.parse(fileContent).entryTags,
+        entriesLength: JSON.parse(fileContent).entries?.length,
+      });
+
+      const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: fileContent,
+      });
 
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
-        console.error('Upload error:', errorText);
-        throw new Error(`Failed to create backup: ${uploadResponse.status}`);
+        console.error('Upload content error:', errorText);
+        throw new Error(`Failed to upload backup content: ${uploadResponse.status}`);
       }
 
-      const data = await uploadResponse.json();
-      console.log('Backup created successfully:', data.id);
-      return data.id;
+      console.log('Backup created successfully:', fileId);
+      return fileId;
     } catch (error) {
       console.error('Error backing up journal:', error);
       throw error;
@@ -310,8 +327,12 @@ class GoogleDriveService {
         throw new Error('Not authenticated');
       }
 
+      // Get the backup folder first
+      const folderId = await this.getOrCreateBackupFolder();
+
+      // Search for backup files in the folder by name pattern
       const response = await fetch(
-        `${GOOGLE_DRIVE_API}/files?q=properties has { key='app' and value='journalizer' } and properties has { key='type' and value='backup' } and trashed=false&spaces=drive&orderBy=createdTime desc`,
+        `${GOOGLE_DRIVE_API}/files?q=name contains 'Backup_' and '${folderId}' in parents and trashed=false&spaces=drive&orderBy=createdTime desc`,
         {
           headers: {
             'Authorization': `Bearer ${this.accessToken}`,
@@ -353,8 +374,19 @@ class GoogleDriveService {
       }
 
       const text = await response.text();
+      
+      // Parse the JSON directly
       const data = JSON.parse(text);
       console.log('Backup downloaded successfully');
+      console.log('Downloaded backup structure:', {
+        keys: Object.keys(data),
+        hasEntries: !!data.entries,
+        hasTags: !!data.tags,
+        hasEntryTags: !!data.entryTags,
+        entriesLength: data.entries?.length,
+        tagsLength: data.tags?.length,
+        entryTagsLength: data.entryTags?.length
+      });
       return data;
     } catch (error) {
       console.error('Error downloading backup:', error);

@@ -134,7 +134,7 @@ export default function CloudSyncScreen() {
     const handleRestore = async (fileId, fileName) => {
         Alert.alert(
             'Restore Backup',
-            `Are you sure you want to restore from "${fileName}"?\n\nThis will replace all current journal entries!`,
+            `Are you sure you want to restore from "${fileName}"?\n\nThis will replace the current journal entry!`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
