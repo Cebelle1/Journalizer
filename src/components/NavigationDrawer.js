@@ -97,7 +97,6 @@ export default function NavigationDrawer({ navigation }) {
       {/* Footer */}
       <View style={styles.footer}>
         <IonicIcon name="log-out-outline" size={24} color="#000" />
-        <MatCommIcon name="bell-outline" size={24} color="#000" />
       </View>
     </View>
   );

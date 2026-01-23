@@ -349,6 +349,108 @@ export const createTag = async (tagName) => {
 
 
 
+// Export all data for backup
+export const exportAllData = async () => {
+  try {
+    const db = await getDBInstance();
+    
+    // Get all journal entries with images
+    const entries = await db.getAllAsync(`
+      SELECT * FROM journal_entries ORDER BY date DESC
+    `);
+    
+    // Get all tags
+    const tags = await db.getAllAsync(`
+      SELECT * FROM tags ORDER BY name ASC
+    `);
+    
+    // Get all entry-tag associations
+    const entryTags = await db.getAllAsync(`
+      SELECT * FROM entry_tags
+    `);
+    
+    // Parse images JSON for each entry
+    const entriesWithParsedImages = entries.map(entry => ({
+      ...entry,
+      images: entry.images ? JSON.parse(entry.images) : []
+    }));
+    
+    const backup = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      entries: entriesWithParsedImages,
+      tags,
+      entryTags
+    };
+    
+    console.log('Exported data:', {
+      entries: backup.entries.length,
+      tags: backup.tags.length,
+      entryTags: backup.entryTags.length
+    });
+    
+    return backup;
+  } catch (error) {
+    console.error('Error exporting data:', error);
+    throw error;
+  }
+};
+
+// Import data from backup
+export const importAllData = async (backup) => {
+  try {
+    const db = await getDBInstance();
+    
+    if (!backup || !backup.entries || !backup.tags || !backup.entryTags) {
+      throw new Error('Invalid backup format');
+    }
+    
+    // Clear existing data
+    await db.runAsync(`DELETE FROM entry_tags`);
+    await db.runAsync(`DELETE FROM tags`);
+    await db.runAsync(`DELETE FROM journal_entries`);
+    
+    // Import tags
+    for (const tag of backup.tags) {
+      await db.runAsync(
+        `INSERT INTO tags (id, name, createdAt) VALUES (?, ?, ?)`,
+        [tag.id, tag.name, tag.createdAt]
+      );
+    }
+    
+    // Import journal entries
+    for (const entry of backup.entries) {
+      const imagesJSON = entry.images && entry.images.length > 0 
+        ? JSON.stringify(entry.images) 
+        : null;
+        
+      await db.runAsync(
+        `INSERT INTO journal_entries (id, date, title, body, images, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
+        [entry.id, entry.date, entry.title, entry.body, imagesJSON, entry.createdAt]
+      );
+    }
+    
+    // Import entry-tag associations
+    for (const entryTag of backup.entryTags) {
+      await db.runAsync(
+        `INSERT INTO entry_tags (id, entryId, tagId) VALUES (?, ?, ?)`,
+        [entryTag.id, entryTag.entryId, entryTag.tagId]
+      );
+    }
+    
+    console.log('Imported data successfully:', {
+      entries: backup.entries.length,
+      tags: backup.tags.length,
+      entryTags: backup.entryTags.length
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error importing data:', error);
+    throw error;
+  }
+};
+
 // =============FOR TESTING PURPOSES ONLY
 const clearDataBase = async () => {
   const db = await getDBInstance();

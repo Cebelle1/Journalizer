@@ -29,7 +29,18 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="journalizer"/>
         <data android:scheme="exp+journalizer"/>
+      </intent-filter>
+      <!-- Handle Google OAuth native redirect -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data
+          android:scheme="com.googleusercontent.apps.1024390295547-tkmrp282r8dv9qparg6ufi5u9kr76p1g"
+          android:host="oauth2redirect"
+          android:path="/google"/>
       </intent-filter>
     </activity>
   </application>

@@ -4,8 +4,9 @@
     "slug": "Journalizer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/image/journalizer-icon.png",
+    "icon": "./src/assets/image/journalizer-icon-cropped.png",
     "userInterfaceStyle": "light",
+    "scheme": "journalizer",
     "splash": {
       "image": "./src/assets/image/journalizer-splash-screen-4.png",
       "resizeMode": "cover",
@@ -17,13 +18,30 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/image/journalizer-icon.png",
+        "foregroundImage": "./src/assets/image/journalizer-icon-cropped.png",
         "backgroundColor": "#ddd7e2"
       },
-      "package": "com.anonymous.Journalizer"
+      "package": "com.anonymous.Journalizer",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "com.googleusercontent.apps.1024390295547-tkmrp282r8dv9qparg6ufi5u9kr76p1g",
+              "host": "oauth2redirect",
+              "pathPrefix": "/google"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
-      "favicon": "./src/assets/image/journalizer-icon.png"
+      "favicon": "./src/assets/image/journalizer-icon-cropped.png"
     },
     "plugins": [
       [
