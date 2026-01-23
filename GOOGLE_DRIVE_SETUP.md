@@ -40,56 +40,47 @@
 
 ## Step 4: Create OAuth 2.0 Credentials
 
-### For Android:
+### Create Web Client ID (Required):
+
+1. Go to **"APIs & Services" > "Credentials"**
+2. Click **"Create Credentials" > "OAuth client ID"**
+3. Select **"Web application"**
+4. Fill in the following information:
+   - **Name**: `Journalizer Web` (This name is only used to identify the client in the console and will not be shown to end users)
+   - **Authorized JavaScript origins**: Leave empty (not needed for this setup)
+   - **Authorized redirect URIs**: 
+     - Add: `https://auth.expo.io/@cebelle/Journalizer`
+     - ⚠️ Note: It may take 5 minutes to a few hours for settings to take effect
+5. Click **"Create"**
+6. **Save the Client ID** - this is your main client ID!
+
+### For Android (Additional - Required for production builds):
+
+After you build your app with EAS Build, you'll need to add the Android OAuth client:
 
 1. Go to **"APIs & Services" > "Credentials"**
 2. Click **"Create Credentials" > "OAuth client ID"**
 3. Select **"Android"** as application type
 4. Enter a name (e.g., "Journalizer Android")
 5. Get your package name from `android/app/build.gradle` (look for `applicationId`)
-6. Get your SHA-1 certificate fingerprint:
+6. Get your SHA-1 certificate fingerprint from EAS:
 
 ```bash
-# For debug keystore (development)
-cd android
-./gradlew signingReport
-
-# Or using keytool directly
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+# Get SHA-1 from EAS credentials
+eas credentials
 ```
 
 7. Copy the SHA-1 fingerprint and paste it
 8. Click **"Create"**
-9. **Save the Client ID** - you'll need this!
+9. This allows OAuth to work on installed APKs
 
-### For iOS (if applicable):
-
-1. Click **"Create Credentials" > "OAuth client ID"**
-2. Select **"iOS"** as application type
-3. Enter a name (e.g., "Journalizer iOS")
-4. Enter your Bundle ID from `ios/Journalizer/Info.plist`
-5. Click **"Create"**
-6. **Save the Client ID**
-
-## Step 5: Create Web Client ID (Required for Expo)
-
-1. Click **"Create Credentials" > "OAuth client ID"**
-2. Select **"Web application"**
-3. Enter a name (e.g., "Journalizer Web")
-4. Under "Authorized redirect URIs", add:
-   - `https://auth.expo.io/@your-expo-username/journalizer`
-   - For local development: `http://localhost:19006`
-5. Click **"Create"**
-6. **Save the Client ID** - this is your main client ID!
-
-## Step 6: Configure Your App
+## Step 5: Configure Your App
 
 1. Open `src/services/googleDriveService.js`
-2. Replace the placeholder values:
+2. Replace the placeholder with your Web Client ID:
 
 ```javascript
-const GOOGLE_CLIENT_ID = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
-const GOOGLE_ANDROID_CLIENT_ID = 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
 ```
 
 3. Update your `app.json` with the scheme:
