@@ -607,7 +607,7 @@ const cloudSyncStyles = StyleSheet.create({
         gap: 15,
     },
     providerCard: {
-        backgroundColor: 'rgba(236, 31, 31, 0.95)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderRadius: 15,
         padding: 20,
         elevation: 2,
