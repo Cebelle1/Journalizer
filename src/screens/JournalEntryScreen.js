@@ -70,6 +70,7 @@ export default function JournalEntryScreen({ navigation, route }){
             setDate(new Date(entry.date));
             setTitle(entry.title || '');
             setBody(entry.body || '');
+            // Keep tags as objects with color information
             setTags(Array.isArray(entry.tags) ? entry.tags : []);
             setImages(Array.isArray(entry.images) ? entry.images : []);
           }
@@ -104,6 +105,9 @@ export default function JournalEntryScreen({ navigation, route }){
   // When Save Icon is pressed
   const onSave = async() => {
     try {
+      // Extract tag names for saving to database
+      const tagNames = tags.map(t => typeof t === 'string' ? t : t.name);
+      
       if (entryId) {
         // Update the existing entry
         await updateJournalEntry({
@@ -111,7 +115,7 @@ export default function JournalEntryScreen({ navigation, route }){
           date: date.toISOString(),
           title: title,
           body: body,
-          tags: tags,
+          tags: tagNames,
           images: images
         });
       } else {
@@ -124,7 +128,7 @@ export default function JournalEntryScreen({ navigation, route }){
         date: date.toISOString(),
         title: title,
         body: body,
-        tags: tags,
+        tags: tagNames,
         images: images
       });
     }
@@ -136,11 +140,18 @@ export default function JournalEntryScreen({ navigation, route }){
   
   // Handle adding a tag
   const addTag = (tag) => {
-    if (tag.trim() !== '') {
+    const tagName = typeof tag === 'string' ? tag : tag.name;
+    if (tagName.trim() !== '') {
       setTags(prevTags => {
-        // Add tag if not in list
-        if (!prevTags.includes(tag)) {
-          return [...prevTags, tag.trim()];
+        // Add tag if not in list (check by name)
+        const tagExists = prevTags.some(t => {
+          const existingName = typeof t === 'string' ? t : t.name;
+          return existingName === tagName;
+        });
+        if (!tagExists) {
+          // Find the tag object from allAvailableTags
+          const tagObj = allAvailableTags.find(t => t.name === tagName);
+          return [...prevTags, tagObj || { name: tagName, color: '#8E44AD' }];
         }
         alert('Tag already exists');
         return prevTags;
@@ -151,7 +162,11 @@ export default function JournalEntryScreen({ navigation, route }){
 
   const deleteTag = (tag) => {
     // Remove tag from current entry only
-    setTags(prevTags => prevTags.filter(t => t !== tag));
+    const tagName = typeof tag === 'string' ? tag : tag.name;
+    setTags(prevTags => prevTags.filter(t => {
+      const tName = typeof t === 'string' ? t : t.name;
+      return tName !== tagName;
+    }));
   };
 
   const pickImages = async () => {

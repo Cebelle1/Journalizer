@@ -19,7 +19,7 @@ A privacy-focused journaling app for Android that keeps your thoughts secure and
 - **Custom Tags** - Create and assign tags to categorize your entries
 - **Tag Management** - Add, edit, and delete tags with ease
 - **Tag Filtering** - Filter entries by tags to find related thoughts
-- **Color-Coded Tags (To-do)** - Visual organization with customizable tag colors
+- **Color-Coded Tags** - Visual organization with customizable tag colors
 
 ### ☁️ Cloud Backup (Optional)
 - **Google Drive Integration** - Optional backup to Google Drive
@@ -27,6 +27,7 @@ A privacy-focused journaling app for Android that keeps your thoughts secure and
 - **Individual Entry Backup** - Backup selected entries as separate files
 - **Easy Restore** - Restore individual backups or all at once
 - **Merge-Friendly** - Restores merge with local data, keeping local-only entries
+- **Encrypted Backups** - Files are encrypted on the Cloud to prevent external parties from reading it directly
 
 ### 🎨 User Experience
 - **Clean Interface** - Beautiful gradient themes with intuitive navigation

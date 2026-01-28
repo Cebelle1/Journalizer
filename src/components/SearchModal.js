@@ -55,11 +55,12 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
     // Validate tags - check if entered tags exist
     const enteredTags = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
     if (enteredTags.length > 0) {
-      const invalidTags = enteredTags.filter(tag => !availableTags.includes(tag));
+      const availableTagNames = availableTags.map(t => typeof t === 'string' ? t : t.name);
+      const invalidTags = enteredTags.filter(tag => !availableTagNames.includes(tag));
       if (invalidTags.length > 0) {
         Alert.alert(
           'Invalid Tags',
-          `The following tags don't exist:\n\n${invalidTags.join(', ')}\n\nAvailable tags:\n${availableTags.join(', ')}`
+          `The following tags don't exist:\n\n${invalidTags.join(', ')}\n\nAvailable tags:\n${availableTagNames.join(', ')}`
         );
         return;
       }
@@ -167,21 +168,25 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
             <View style={styles.availableTagsContainer}>
               <Text style={styles.availableTagsLabel}>Available tags:</Text>
               <View style={styles.availableTagsDisplay}>
-                {availableTags.map((tag, index) => (
+              {availableTags.map((tag, index) => {
+                const tagName = typeof tag === 'string' ? tag : tag.name;
+                const tagColor = typeof tag === 'string' ? '#8E44AD' : (tag.color || '#8E44AD');
+                return (
                   <TouchableOpacity
                     key={index}
-                    style={styles.availableTag}
+                    style={[styles.availableTag, { backgroundColor: `${tagColor}20`, borderColor: tagColor }]}
                     onPress={() => {
                       // Add clicked tag to input
                       const currentTags = tags.split(',').map(t => t.trim()).filter(Boolean);
-                      if (!currentTags.includes(tag)) {
-                        setTags(currentTags.length > 0 ? `${tags}, ${tag}` : tag);
+                      if (!currentTags.includes(tagName)) {
+                        setTags(currentTags.length > 0 ? `${tags}, ${tagName}` : tagName);
                       }
                     }}
                   >
-                    <Text style={styles.availableTagText}>{tag}</Text>
+                    <Text style={[styles.availableTagText, { color: tagColor }]}>{tagName}</Text>
                   </TouchableOpacity>
-                ))}
+                );
+              })}
               </View>
             </View>
           )}

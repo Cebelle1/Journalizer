@@ -11,15 +11,20 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
 
   // Filter available tags (exclude already added ones)
   useEffect(() => {
+    const currentTagNames = currentTags.map(t => typeof t === 'string' ? t : t.name);
+    let available = allTags.filter(tag => {
+      const tagName = typeof tag === 'string' ? tag : tag.name;
+      return !currentTagNames.includes(tagName);
+    });
+
     if (searchText.trim()) {
-      const availableTags = allTags.filter(tag => !currentTags.includes(tag));
-      setFilteredAvailableTags(availableTags.filter(tag => 
-        tag.toLowerCase().includes(searchText.toLowerCase())
-      ));
-    } else {
-      const availableTags = allTags.filter(tag => !currentTags.includes(tag));
-      setFilteredAvailableTags(availableTags);
+      available = available.filter(tag => {
+        const tagName = typeof tag === 'string' ? tag : tag.name;
+        return tagName.toLowerCase().includes(searchText.toLowerCase());
+      });
     }
+
+    setFilteredAvailableTags(available);
   }, [searchText, allTags, currentTags]);
 
   // Reset search when modal opens/closes
@@ -41,7 +46,10 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
   const handleCreateNewTag = () => {
     if (searchText.trim()) {
       // Check if tag already exists globally
-      const exists = allTags.some(tag => tag.toLowerCase() === searchText.trim().toLowerCase());
+      const exists = allTags.some(tag => {
+        const tagName = typeof tag === 'string' ? tag : tag.name;
+        return tagName.toLowerCase() === searchText.trim().toLowerCase();
+      });
       if (exists) {
         // Tag exists but not in current entry, just add it
         handleSelectTag(searchText.trim());
@@ -54,7 +62,10 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
   };
 
   const showCreateButton = searchText.trim() && 
-    !allTags.some(tag => tag.toLowerCase() === searchText.trim().toLowerCase());
+    !allTags.some(tag => {
+      const tagName = typeof tag === 'string' ? tag : tag.name;
+      return tagName.toLowerCase() === searchText.trim().toLowerCase();
+    });
 
   return (
     <Modal
@@ -72,14 +83,18 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Tags in this entry</Text>
               <View style={styles.currentTagsContainer}>
-                {currentTags.map((tag, index) => (
-                  <View key={index} style={styles.currentTagItem}>
-                    <Text style={styles.currentTagText}>{tag}</Text>
-                    <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
-                      <Ionicons name="close" size={18} color="#FF3B30" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                {currentTags.map((tag, index) => {
+                  const tagName = typeof tag === 'string' ? tag : tag.name;
+                  const tagColor = typeof tag === 'string' ? '#8E44AD' : (tag.color || '#8E44AD');
+                  return (
+                    <View key={index} style={[styles.currentTagItem, { backgroundColor: `${tagColor}20`, borderColor: tagColor }]}>
+                      <Text style={[styles.currentTagText, { color: tagColor }]}>{tagName}</Text>
+                      <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
+                        <Ionicons name="close" size={18} color={tagColor} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -109,16 +124,20 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
           <ScrollView style={styles.tagsScrollView} showsVerticalScrollIndicator={false}>
             {filteredAvailableTags.length > 0 ? (
               <View style={styles.tagsContainer}>
-                {filteredAvailableTags.map((tag, index) => (
-                  <TouchableOpacity 
-                    key={index}
-                    style={styles.tagRow}
-                    onPress={() => handleSelectTag(tag)}
-                  >
-                    <Ionicons name="add" size={18} color="#007AFF" />
-                    <Text style={styles.tagButtonText}>{tag}</Text>
-                  </TouchableOpacity>
-                ))}
+                {filteredAvailableTags.map((tag, index) => {
+                  const tagName = typeof tag === 'string' ? tag : tag.name;
+                  const tagColor = typeof tag === 'string' ? '#8E44AD' : (tag.color || '#8E44AD');
+                  return (
+                    <TouchableOpacity 
+                      key={index}
+                      style={[styles.tagRow, { borderLeftColor: tagColor, borderLeftWidth: 3 }]}
+                      onPress={() => handleSelectTag(tagName)}
+                    >
+                      <Ionicons name="add" size={18} color={tagColor} />
+                      <Text style={[styles.tagButtonText, { color: tagColor }]}>{tagName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             ) : (
               <Text style={styles.noTagsText}>
@@ -143,7 +162,7 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
       </View>
     </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
   modalContainer: {
@@ -189,16 +208,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#E8F4FF',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#007AFF',
   },
   currentTagText: {
     fontSize: 14,
-    color: '#007AFF',
     fontFamily: 'Montserrat-Regular',
   },
   searchContainer: {
@@ -238,7 +254,6 @@ const styles = StyleSheet.create({
   },
   tagButtonText: {
     fontSize: 16,
-    color: '#000',
     fontFamily: 'Montserrat-Regular',
   },
   noTagsText: {

@@ -10,12 +10,13 @@ import {
   FlatList,
   TextInput,
   Dimensions,
+  Modal,
 } from 'react-native';
-import { readUniqueTags, deleteTagFromAllEntries, createTag } from '../database/journalDB';
+import { readUniqueTags, deleteTagFromAllEntries, createTag, updateTagColor } from '../database/journalDB';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
 import { navigatorStyles, headerSearchStyles, fabStyles, emptyStateStyles } from '../styles/componentStyle';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
 export default function TagsScreen() {
   const navigation = useNavigation();
@@ -25,7 +26,10 @@ export default function TagsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#8E44AD');
   const [adding, setAdding] = useState(false);
+  const [editingTag, setEditingTag] = useState(null);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   // Load all tags on component mount
   useEffect(() => {
@@ -76,7 +80,7 @@ export default function TagsScreen() {
       await deleteTagFromAllEntries(tagName);
       
       // Remove from UI
-      setTags(prevTags => prevTags.filter(tag => tag !== tagName));
+      setTags(prevTags => prevTags.filter(tag => tag.name !== tagName));
       Alert.alert('Success', `Tag "${tagName}" has been deleted`);
     } catch (error) {
       console.error('Error deleting tag:', error);
@@ -93,16 +97,17 @@ export default function TagsScreen() {
     }
 
     // Check if tag already exists
-    if (tags.includes(newTagName.trim())) {
+    if (tags.some(tag => tag.name === newTagName.trim())) {
       Alert.alert('Error', 'This tag already exists');
       return;
     }
 
     try {
       setAdding(true);
-      await createTag(newTagName.trim());
-      setTags(prevTags => [...prevTags, newTagName.trim()].sort());
+      await createTag(newTagName.trim(), newTagColor);
+      setTags(prevTags => [...prevTags, { name: newTagName.trim(), color: newTagColor }].sort((a, b) => a.name.localeCompare(b.name)));
       setNewTagName('');
+      setNewTagColor('#8E44AD');
       setShowAddModal(false);
       Alert.alert('Success', `Tag "${newTagName}" has been created`);
     } catch (error) {
@@ -114,8 +119,22 @@ export default function TagsScreen() {
   };
 
   const filteredTags = tags.filter(tag => 
-    tag.toLowerCase().includes(searchQuery.toLowerCase())
+    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleChangeTagColor = async (tagName, newColor) => {
+    try {
+      await updateTagColor(tagName, newColor);
+      setTags(prevTags => prevTags.map(tag =>
+        tag.name === tagName ? { ...tag, color: newColor } : tag
+      ));
+      setEditingTag(null);
+      setShowColorPicker(false);
+    } catch (error) {
+      console.error('Error updating tag color:', error);
+      Alert.alert('Error', 'Failed to update tag color');
+    }
+  };
 
   const renderTagItem = ({ item: tagName }) => (
     <View style={styles.tagItemContainer}>
@@ -191,21 +210,27 @@ export default function TagsScreen() {
           </View>
         ) : (
           <View style={styles.tagsList}>
-            {filteredTags.map(tagName => (
-              <View key={tagName} style={styles.tagItemContainer}>
+            {filteredTags.map(tag => (
+              <View key={tag.name} style={styles.tagItemContainer}>
                 <View style={styles.tagContent}>
-                  <Ionicons name="pricetag" size={20} color={themeStyle.darkPurple5} style={styles.tagIcon} />
-                  <Text style={styles.tagName}>{tagName}</Text>
+                  <TouchableOpacity
+                    style={[styles.colorDot, { backgroundColor: tag.color }]}
+                    onPress={() => {
+                      setEditingTag(tag.name);
+                      setShowColorPicker(true);
+                    }}
+                  />
+                  <Text style={styles.tagName}>{tag.name}</Text>
                 </View>
                 <TouchableOpacity
                   style={[
                     styles.deleteButton,
-                    deleting === tagName && styles.deleteButtonDisabled,
+                    deleting === tag.name && styles.deleteButtonDisabled,
                   ]}
-                  onPress={() => handleDeleteTag(tagName)}
-                  disabled={deleting === tagName}
+                  onPress={() => handleDeleteTag(tag.name)}
+                  disabled={deleting === tag.name}
                 >
-                  {deleting === tagName ? (
+                  {deleting === tag.name ? (
                     <ActivityIndicator size="small" color="#FF3B30" />
                   ) : (
                     <Ionicons name="trash-outline" size={20} color="#FF3B30" />
@@ -228,7 +253,11 @@ export default function TagsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create New Tag</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <TouchableOpacity onPress={() => {
+                setShowAddModal(false);
+                setNewTagName('');
+                setNewTagColor('#8E44AD');
+              }}>
                 <Ionicons name="close" size={24} color={themeStyle.black} />
               </TouchableOpacity>
             </View>
@@ -242,12 +271,34 @@ export default function TagsScreen() {
               editable={!adding}
             />
 
+            <View style={styles.colorPickerSection}>
+              <Text style={styles.colorPickerLabel}>Choose a color:</Text>
+              <View style={styles.colorGrid}>
+                {['#8E44AD', '#3498DB', '#E74C3C', '#F39C12', '#16A085', '#D35400', '#C0392B', '#2980B9', '#27AE60', '#8E44AD'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      newTagColor === color && styles.colorOptionSelected
+                    ]}
+                    onPress={() => setNewTagColor(color)}
+                  >
+                    {newTagColor === color && (
+                      <Ionicons name="checkmark" size={20} color={themeStyle.white} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowAddModal(false);
                   setNewTagName('');
+                  setNewTagColor('#8E44AD');
                 }}
                 disabled={adding}
               >
@@ -269,9 +320,123 @@ export default function TagsScreen() {
           </View>
         </View>
       )}
+
+      {/* Color Picker Modal */}
+      {showColorPicker && editingTag && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentLarge}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Change Color for "{editingTag}"</Text>
+              <TouchableOpacity onPress={() => {
+                setShowColorPicker(false);
+                setEditingTag(null);
+              }}>
+                <Ionicons name="close" size={24} color={themeStyle.black} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Warm Colors */}
+              <Text style={styles.colorCategoryTitle}>Warm Colors</Text>
+              <View style={styles.colorGridLarge}>
+                {['#821A1A', '#E74C3C', '#FFA07A', '#FF9900', '#FFD93D', '#FFF3D1'].map((color) => {
+                  const currentTagColor = tags.find(t => t.name === editingTag)?.color || '#8E44AD';
+                  return (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOptionLarge,
+                        { backgroundColor: color },
+                        currentTagColor === color && styles.colorOptionSelected
+                      ]}
+                      onPress={() => handleChangeTagColor(editingTag, color)}
+                    >
+                      {currentTagColor === color && (
+                        <Ionicons name="checkmark" size={24} color={themeStyle.white} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Cool Colors */}
+              <Text style={styles.colorCategoryTitle}>Cool Colors</Text>
+              <View style={styles.colorGridLarge}>
+                {['#141480', '#0059ff', '#00CED1', '#007222', '#01b94e', '#93f393'].map((color) => {
+                  const currentTagColor = tags.find(t => t.name === editingTag)?.color || '#8E44AD';
+                  return (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOptionLarge,
+                        { backgroundColor: color },
+                        currentTagColor === color && styles.colorOptionSelected
+                      ]}
+                      onPress={() => handleChangeTagColor(editingTag, color)}
+                    >
+                      {currentTagColor === color && (
+                        <Ionicons name="checkmark" size={24} color={themeStyle.white} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Purple & Pink Colors */}
+              <Text style={styles.colorCategoryTitle}>Purple & Pink</Text>
+              <View style={styles.colorGridLarge}>
+                {['#7300a0', '#ec47f1', '#ebb1fa', '#ca00b9', '#DA70D6', '#C39BD3'].map((color) => {
+                  const currentTagColor = tags.find(t => t.name === editingTag)?.color || '#8E44AD';
+                  return (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOptionLarge,
+                        { backgroundColor: color },
+                        currentTagColor === color && styles.colorOptionSelected
+                      ]}
+                      onPress={() => handleChangeTagColor(editingTag, color)}
+                    >
+                      {currentTagColor === color && (
+                        <Ionicons name="checkmark" size={24} color={themeStyle.white} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Neutral Colors */}
+              <Text style={styles.colorCategoryTitle}>Neutral Colors</Text>
+              <View style={styles.colorGridLarge}>
+                {['#34495E', '#546E7A', '#607D8B', '#7F8C8D', '#95A5A6', '#000000'].map((color) => {
+                  const currentTagColor = tags.find(t => t.name === editingTag)?.color || '#8E44AD';
+                  return (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOptionLarge,
+                        { backgroundColor: color },
+                        currentTagColor === color && styles.colorOptionSelected
+                      ]}
+                      onPress={() => handleChangeTagColor(editingTag, color)}
+                    >
+                      {currentTagColor === color && (
+                        <Ionicons name="checkmark" size={24} color={themeStyle.white} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </ThemeBackground>
   );
 }
+
+const { width: screenWidth } = Dimensions.get('window');
+const COLOR_BUTTON_SIZE = ((screenWidth * 0.9 - 40 - 28) / 3) * 0.85; // 90% modal width - padding - gaps, reduced by 15%
 
 const styles = StyleSheet.create({
   scrollContainer: {
@@ -324,6 +489,13 @@ const styles = StyleSheet.create({
   tagIcon: {
     width: 24,
   },
+  colorDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
   tagName: {
     fontSize: 15,
     color: themeStyle.black,
@@ -375,11 +547,80 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: themeStyle.black,
+    marginBottom: 10,
+  },
+  colorPickerSection: {
+    gap: 10,
+  },
+  colorPickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: themeStyle.black,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'flex-start',
+  },
+  colorGridLarge: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  colorOption: {
+    width: '22%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorOptionLarge: {
+    width: COLOR_BUTTON_SIZE,
+    height: COLOR_BUTTON_SIZE,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  colorOptionSelected: {
+    borderColor: themeStyle.black,
+    borderWidth: 3,
+  },
+  colorCategoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: themeStyle.black,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  modalContentLarge: {
+    backgroundColor: themeStyle.white,
+    borderRadius: 20,
+    padding: 20,
+    width: '90%',
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'flex-end',
+    marginTop: 10,
   },
   modalButton: {
     paddingHorizontal: 16,

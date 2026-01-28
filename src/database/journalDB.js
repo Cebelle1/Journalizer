@@ -3,6 +3,13 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 const IMAGES_DIR = `${FileSystem.documentDirectory}JournalImages/`;
 
+// Helper to format color with # prefix
+const formatColor = (color) => {
+  if (!color) return '#8E44AD';
+  const str = String(color).trim();
+  return str.startsWith('#') ? str : `#${str}`;
+};
+
 const ensureImagesDir = async () => {
   try {
     const dirInfo = await FileSystem.getInfoAsync(IMAGES_DIR);
@@ -140,6 +147,24 @@ const createJournalDB = async () => {
   }
 };
 
+// Run migrations
+const runMigrations = async (db) => {
+  try {
+    // Check if color column exists in tags table
+    const tableInfo = await db.getAllAsync("PRAGMA table_info(tags)");
+    const hasColorColumn = tableInfo.some(col => col.name === 'color');
+    
+    if (!hasColorColumn) {
+      console.log('Adding color column to tags table...');
+      await db.runAsync(`ALTER TABLE tags ADD COLUMN color TEXT DEFAULT '8E44AD'`);
+      console.log('✓ Successfully added color column to tags table');
+    }
+  } catch (error) {
+    console.error('✗ Error running migrations:', error);
+    // Don't throw - migrations are not critical
+  }
+};
+
 // Initialize tables on first use
 const initializeTables = async (db) => {
   try {
@@ -148,6 +173,7 @@ const initializeTables = async (db) => {
         CREATE TABLE IF NOT EXISTS tags (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT UNIQUE NOT NULL,
+          color TEXT DEFAULT '8E44AD',
           createdAt TEXT NOT NULL
         )
       `);
@@ -187,6 +213,9 @@ const initializeTables = async (db) => {
       console.error('Error creating entry_tags table:', err);
       throw err;
     }
+
+    // Run migrations
+    await runMigrations(db);
   } catch (error) {
     console.error('✗ Error initializing tables:', error);
     
@@ -279,8 +308,8 @@ export const createJournalEntry = async ({ date, title, body, tags = [], images 
     // Add tags for this entry
     for (const tagName of tags) {
       const tagResult = await db.runAsync(
-        `INSERT OR IGNORE INTO tags (name, createdAt) VALUES (?, ?)`,
-        [tagName, now]
+        `INSERT OR IGNORE INTO tags (name, color, createdAt) VALUES (?, ?, ?)`,
+        [tagName, '#8E44AD', now]
       );
       
       const tag = await db.getFirstAsync(`SELECT id FROM tags WHERE name = ?`, [tagName]);
@@ -309,19 +338,35 @@ export const readAllJournalEntries = async () => {
         je.date,
         je.title,
         je.body,
-        je.createdAt,
-        GROUP_CONCAT(t.name) as tags
+        je.createdAt
       FROM journal_entries je
-      LEFT JOIN entry_tags et ON je.id = et.entryId
-      LEFT JOIN tags t ON et.tagId = t.id
-      GROUP BY je.id
       ORDER BY je.date DESC
     `, []);
     
-    return entries ? entries.map(entry => ({
-      ...entry,
-      tags: entry.tags ? entry.tags.split(',') : []
-    })) : [];
+    // Fetch tags for each entry
+    const entriesWithTags = [];
+    for (const entry of entries) {
+      const tagResults = await db.getAllAsync(`
+        SELECT DISTINCT t.id, t.name, t.color
+        FROM entry_tags et
+        LEFT JOIN tags t ON et.tagId = t.id
+        WHERE et.entryId = ?
+        ORDER BY t.name ASC
+      `, [entry.id]);
+      
+      const tags = tagResults ? tagResults.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        color: formatColor(tag.color)
+      })) : [];
+      
+      entriesWithTags.push({
+        ...entry,
+        tags
+      });
+    }
+    
+    return entriesWithTags;
   } catch (error) {
     console.error('Error reading journal entries:', error);
     return [];
@@ -334,13 +379,7 @@ export const searchJournalEntries = async ({startDate, endDate, title, tags = []
     const db = await getDBInstance();
     
     let query = `
-      SELECT DISTINCT
-        je.id,
-        je.date,
-        je.title,
-        je.body,
-        je.createdAt,
-        GROUP_CONCAT(t.name) as tags
+      SELECT DISTINCT je.id, je.date, je.title, je.body, je.createdAt
       FROM journal_entries je
       LEFT JOIN entry_tags et ON je.id = et.entryId
       LEFT JOIN tags t ON et.tagId = t.id
@@ -365,10 +404,13 @@ export const searchJournalEntries = async ({startDate, endDate, title, tags = []
     }
     
     if (tags && tags.length > 0) {
-      // Find entries that have ANY of the specified tags
-      const tagPlaceholders = tags.map(() => '?').join(',');
-      query += ` AND t.name IN (${tagPlaceholders})`;
-      params.push(...tags);
+      // Find entries that have ANY of the specified tags (search by tag name)
+      const tagNames = tags.filter(t => typeof t === 'string');
+      if (tagNames.length > 0) {
+        const tagPlaceholders = tagNames.map(() => '?').join(',');
+        query += ` AND t.name IN (${tagPlaceholders})`;
+        params.push(...tagNames);
+      }
     }
     
     query += ` GROUP BY je.id ORDER BY je.date DESC`;
@@ -376,10 +418,30 @@ export const searchJournalEntries = async ({startDate, endDate, title, tags = []
     console.log('Executing search query with params:', { query: query.substring(0, 100), paramsCount: params.length });
     const results = await db.getAllAsync(query, params.length > 0 ? params : []);
     
-    return results ? results.map(entry => ({
-      ...entry,
-      tags: entry.tags ? entry.tags.split(',').filter(Boolean) : []
-    })) : [];
+    // Fetch tags for each result
+    const resultsWithTags = [];
+    for (const entry of results) {
+      const tagResults = await db.getAllAsync(`
+        SELECT DISTINCT t.id, t.name, t.color
+        FROM entry_tags et
+        LEFT JOIN tags t ON et.tagId = t.id
+        WHERE et.entryId = ?
+        ORDER BY t.name ASC
+      `, [entry.id]);
+      
+      const entryTags = tagResults ? tagResults.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        color: formatColor(tag.color)
+      })) : [];
+      
+      resultsWithTags.push({
+        ...entry,
+        tags: entryTags
+      });
+    }
+    
+    return resultsWithTags;
   } catch (error) {
     console.error('Error searching journal entries:', error);
     return [];
@@ -402,23 +464,33 @@ export const readJournalEntry = async (id) => {
         je.title,
         je.body,
         je.images,
-        je.createdAt,
-        GROUP_CONCAT(t.name) as tags
+        je.createdAt
       FROM journal_entries je
-      LEFT JOIN entry_tags et ON je.id = et.entryId
-      LEFT JOIN tags t ON et.tagId = t.id
       WHERE je.id = ?
-      GROUP BY je.id
     `, [id]);
     
-    if (result) {
-      return {
-        ...result,
-        tags: result.tags ? result.tags.split(',').filter(Boolean) : [],
-        images: result.images ? JSON.parse(result.images) : []
-      };
-    }
-    return null;
+    if (!result) return null;
+    
+    // Get tags with colors
+    const tagResults = await db.getAllAsync(`
+      SELECT DISTINCT t.id, t.name, t.color
+      FROM entry_tags et
+      LEFT JOIN tags t ON et.tagId = t.id
+      WHERE et.entryId = ?
+      ORDER BY t.name ASC
+    `, [id]);
+    
+    const tags = tagResults ? tagResults.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      color: formatColor(tag.color)
+    })) : [];
+    
+    return {
+      ...result,
+      tags,
+      images: result.images ? JSON.parse(result.images) : []
+    };
   } catch (error) {
     console.error('Error reading journal entry:', error);
     return null;
@@ -445,8 +517,8 @@ export const updateJournalEntry = async ({ id, date, title, body, tags = [], ima
     for (const tagName of tags) {
       // Insert tag if it doesn't exist
       await db.runAsync(
-        `INSERT OR IGNORE INTO tags (name, createdAt) VALUES (?, ?)`,
-        [tagName, now]
+        `INSERT OR IGNORE INTO tags (name, color, createdAt) VALUES (?, ?, ?)`,
+        [tagName, '#8E44AD', now]
       );
       
       // Get tag ID
@@ -485,8 +557,12 @@ export const deleteJournalEntry = async (id) => {
 export const readUniqueTags = async () => {
   try {
     const db = await getDBInstance();
-    const result = await db.getAllAsync(`SELECT name FROM tags ORDER BY name ASC`, []);
-    return result ? result.map(tag => tag.name) : [];
+    const result = await db.getAllAsync(`SELECT id, name, color FROM tags ORDER BY name ASC`);
+    return result ? result.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      color: formatColor(tag.color)
+    })) : [];
   } catch (error) {
     console.error('Error reading unique tags:', error);
     return [];
@@ -514,19 +590,38 @@ export const deleteTagFromAllEntries = async (tagName) => {
 };
 
 // Create a new tag
-export const createTag = async (tagName) => {
+export const createTag = async (tagName, color = '#8E44AD') => {
   try {
     const db = await getDBInstance();
     const now = new Date().toISOString();
     
+    // Strip # from color before storing in database
+    const colorValue = color.startsWith('#') ? color.substring(1) : color;
+    
     const result = await db.runAsync(
-      `INSERT INTO tags (name, createdAt) VALUES (?, ?)`,
-      [tagName, now]
+      `INSERT INTO tags (name, color, createdAt) VALUES (?, ?, ?)`,
+      [tagName, colorValue, now]
     );
     return result.lastInsertRowId;
   } catch (error) {
     console.log('Tag already exists:', tagName);
     return null;
+  }
+};
+
+// Update tag color
+export const updateTagColor = async (tagName, color) => {
+  try {
+    const db = await getDBInstance();
+    // Strip # from color before storing in database
+    const colorValue = color.startsWith('#') ? color.substring(1) : color;
+    await db.runAsync(
+      `UPDATE tags SET color = ? WHERE name = ?`,
+      [colorValue, tagName]
+    );
+  } catch (error) {
+    console.error('Error updating tag color:', error);
+    throw error;
   }
 };
 
