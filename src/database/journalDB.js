@@ -1,5 +1,122 @@
 import * as SQLite from 'expo-sqlite';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+
+const IMAGES_DIR = `${FileSystem.documentDirectory}JournalImages/`;
+
+const ensureImagesDir = async () => {
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(IMAGES_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(IMAGES_DIR, { intermediates: true });
+    }
+  } catch (error) {
+    console.error('✗ Error ensuring images directory:', error);
+  }
+};
+
+const readImageAsBase64 = async (uri) => {
+  try {
+    return await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+  } catch (error) {
+    try {
+      const extensionMatch = uri?.match(/\.(jpg|jpeg|png|webp|gif|heic|heif)$/i);
+      const ext = extensionMatch ? extensionMatch[1].toLowerCase() : 'jpg';
+      const tempPath = `${FileSystem.cacheDirectory}backup_${Date.now()}.${ext}`;
+      await FileSystem.copyAsync({ from: uri, to: tempPath });
+      return await FileSystem.readAsStringAsync(tempPath, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+    } catch (copyError) {
+      console.error('✗ Error reading image as base64:', copyError);
+      return null;
+    }
+  }
+};
+
+const serializeImagesForBackup = async (images = []) => {
+  if (!Array.isArray(images) || images.length === 0) return [];
+
+  const serialized = [];
+  for (const uri of images) {
+    try {
+      if (typeof uri !== 'string') {
+        serialized.push(uri);
+        continue;
+      }
+
+      const info = await FileSystem.getInfoAsync(uri);
+      if (!info.exists) {
+        serialized.push(uri);
+        continue;
+      }
+
+      const base64 = await readImageAsBase64(uri);
+      if (!base64) {
+        serialized.push(uri);
+        continue;
+      }
+
+      const extensionMatch = uri.match(/\.(jpg|jpeg|png|webp|gif|heic|heif)$/i);
+      const ext = extensionMatch ? extensionMatch[1].toLowerCase() : 'jpg';
+
+      serialized.push({
+        uri,
+        base64,
+        ext,
+      });
+    } catch (error) {
+      console.error('✗ Error serializing image:', error);
+      serialized.push(uri);
+    }
+  }
+
+  return serialized;
+};
+
+const restoreImagesFromBackup = async (images = [], entryId = 'entry') => {
+  if (!Array.isArray(images) || images.length === 0) return [];
+
+  await ensureImagesDir();
+
+  const restored = [];
+  let index = 0;
+
+  for (const img of images) {
+    try {
+      if (typeof img === 'string') {
+        restored.push(img);
+        index += 1;
+        continue;
+      }
+
+      if (img && img.base64) {
+        const extension = img.ext || 'jpg';
+        const fileName = `${entryId}_${index}_${Date.now()}.${extension}`;
+        const filePath = `${IMAGES_DIR}${fileName}`;
+        await FileSystem.writeAsStringAsync(filePath, img.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        restored.push(filePath);
+        index += 1;
+        continue;
+      }
+
+      if (img?.uri) {
+        restored.push(img.uri);
+        index += 1;
+        continue;
+      }
+    } catch (error) {
+      console.error('✗ Error restoring image:', error);
+    }
+
+    index += 1;
+  }
+
+  return restored;
+};
 
 const createJournalDB = async () => {
   try {
@@ -10,7 +127,7 @@ const createJournalDB = async () => {
     
     try {
       // Try to delete the corrupted database file
-      const dbPath = `${FileSystem.getConstants().documentDirectory}SQLite/JournalDB.db`;
+      const dbPath = `${FileSystem.documentDirectory}SQLite/JournalDB.db`;
       await FileSystem.deleteAsync(dbPath, { idempotent: true });
       
       // Try opening again
@@ -88,7 +205,7 @@ const initializeTables = async (db) => {
       initializingPromise = null;
       
       // Delete corrupted database
-      const dbPath = `${FileSystem.getConstants().documentDirectory}SQLite/JournalDB.db`;
+      const dbPath = `${FileSystem.documentDirectory}SQLite/JournalDB.db`;
       await FileSystem.deleteAsync(dbPath, { idempotent: true });
       
       // Retry
@@ -436,10 +553,15 @@ export const exportAllData = async () => {
     `);
     
     // Parse images JSON for each entry
-    const entriesWithParsedImages = entries.map(entry => ({
-      ...entry,
-      images: entry.images ? JSON.parse(entry.images) : []
-    }));
+    const entriesWithParsedImages = [];
+    for (const entry of entries) {
+      const parsedImages = entry.images ? JSON.parse(entry.images) : [];
+      const serializedImages = await serializeImagesForBackup(parsedImages);
+      entriesWithParsedImages.push({
+        ...entry,
+        images: serializedImages,
+      });
+    }
     
     const backup = {
       version: '1.0',
@@ -497,8 +619,9 @@ export const importAllData = async (backup) => {
     
     // Import journal entries (update if exists, insert if new)
     for (const entry of actualBackup.entries) {
-      const imagesJSON = entry.images && entry.images.length > 0 
-        ? JSON.stringify(entry.images) 
+      const restoredImages = await restoreImagesFromBackup(entry.images || [], entry.id || 'entry');
+      const imagesJSON = restoredImages && restoredImages.length > 0 
+        ? JSON.stringify(restoredImages) 
         : null;
         
       await db.runAsync(
@@ -557,11 +680,16 @@ export const exportSingleEntry = async (entryId) => {
       ...entry,
       images: entry.images ? JSON.parse(entry.images) : []
     };
+
+    const serializedImages = await serializeImagesForBackup(entryWithImages.images);
     
     const backup = {
       version: '1.0',
       exportDate: new Date().toISOString(),
-      entries: [entryWithImages],
+      entries: [{
+        ...entryWithImages,
+        images: serializedImages,
+      }],
       tags,
       entryTags
     };

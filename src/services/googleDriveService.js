@@ -1,5 +1,7 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CryptoJS from 'crypto-js';
+import * as Crypto from 'expo-crypto';
 
 const GOOGLE_WEB_CLIENT_ID = '1024390295547-kdio7p0ag1tpjmt6luno3f3nppf2n6pa.apps.googleusercontent.com';
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -8,12 +10,14 @@ const GOOGLE_DRIVE_API = 'https://www.googleapis.com/drive/v3';
 // Storage keys
 const STORAGE_KEY_ACCESS_TOKEN = '@journalizer_google_access_token';
 const STORAGE_KEY_ID_TOKEN = '@journalizer_google_id_token';
+const STORAGE_KEY_ENCRYPTION_KEY = '@journalizer_encryption_key';
 
 class GoogleDriveService {
   constructor() {
     this.accessToken = null;
     this.idToken = null;
     this.userInfo = null;
+    this.encryptionKey = null;
     this.initializeGoogleSignIn();
   }
 
@@ -36,6 +40,9 @@ class GoogleDriveService {
     try {
       const accessToken = await AsyncStorage.getItem(STORAGE_KEY_ACCESS_TOKEN);
       const idToken = await AsyncStorage.getItem(STORAGE_KEY_ID_TOKEN);
+      
+      // Initialize encryption key
+      await this.initializeEncryptionKey();
 
       if (accessToken && idToken) {
         this.accessToken = accessToken;
@@ -136,6 +143,118 @@ class GoogleDriveService {
     } catch (error) {
       console.error('Error checking authentication:', error);
       return false;
+    }
+  }
+
+  // Initialize or retrieve encryption key
+  async initializeEncryptionKey() {
+    try {
+      let key = await AsyncStorage.getItem(STORAGE_KEY_ENCRYPTION_KEY);
+      
+      if (!key) {
+        // Generate a new encryption key
+        key = await this.generateEncryptionKey();
+        await AsyncStorage.setItem(STORAGE_KEY_ENCRYPTION_KEY, key);
+      }
+      
+      this.encryptionKey = key;
+      return key;
+    } catch (error) {
+      console.error('Error initializing encryption key:', error);
+      throw error;
+    }
+  }
+
+  // Generate a random encryption key
+  async generateEncryptionKey() {
+    // Generate a 256-bit key (32 bytes). Use Expo Crypto for secure random bytes.
+    try {
+      const randomBytes = await Crypto.getRandomBytesAsync(32);
+      const wordArray = CryptoJS.lib.WordArray.create(randomBytes);
+      return wordArray.toString(CryptoJS.enc.Hex);
+    } catch (error) {
+      console.warn('Secure random unavailable, falling back to non-crypto random:', error.message);
+      // Fallback: Math.random-based generator (less secure but functional)
+      let bytes = '';
+      for (let i = 0; i < 32; i += 1) {
+        const byte = Math.floor(Math.random() * 256);
+        bytes += String.fromCharCode(byte);
+      }
+      return CryptoJS.enc.Latin1.parse(bytes).toString(CryptoJS.enc.Hex);
+    }
+  }
+
+  // Encrypt data
+  async encryptData(data) {
+    try {
+      if (!this.encryptionKey) {
+        throw new Error('Encryption key not initialized');
+      }
+      
+      const jsonString = JSON.stringify(data);
+      const ivBytes = await Crypto.getRandomBytesAsync(16);
+      const iv = CryptoJS.lib.WordArray.create(ivBytes);
+      const key = CryptoJS.enc.Hex.parse(this.encryptionKey);
+
+      const encrypted = CryptoJS.AES.encrypt(jsonString, key, {
+        iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7,
+      });
+
+      return JSON.stringify({
+        v: 1,
+        iv: iv.toString(CryptoJS.enc.Base64),
+        data: encrypted.ciphertext.toString(CryptoJS.enc.Base64),
+      });
+    } catch (error) {
+      console.error('Error encrypting data:', error);
+      throw error;
+    }
+  }
+
+  // Decrypt data
+  async decryptData(encryptedData) {
+    try {
+      if (!this.encryptionKey) {
+        throw new Error('Encryption key not initialized');
+      }
+      
+      // New format: JSON string containing iv + data
+      let parsedPayload = null;
+      try {
+        parsedPayload = JSON.parse(encryptedData);
+      } catch {
+        parsedPayload = null;
+      }
+
+      if (parsedPayload && parsedPayload.iv && parsedPayload.data) {
+        const key = CryptoJS.enc.Hex.parse(this.encryptionKey);
+        const iv = CryptoJS.enc.Base64.parse(parsedPayload.iv);
+        const ciphertext = CryptoJS.enc.Base64.parse(parsedPayload.data);
+        const cipherParams = CryptoJS.lib.CipherParams.create({ ciphertext });
+        const decrypted = CryptoJS.AES.decrypt(cipherParams, key, {
+          iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7,
+        });
+        const decryptedString = decrypted.toString(CryptoJS.enc.Utf8);
+        if (!decryptedString) {
+          throw new Error('Decryption failed - invalid data or key');
+        }
+        return JSON.parse(decryptedString);
+      }
+
+      // Legacy format: AES with passphrase
+      const legacyDecrypted = CryptoJS.AES.decrypt(encryptedData, this.encryptionKey);
+      const legacyString = legacyDecrypted.toString(CryptoJS.enc.Utf8);
+      if (!legacyString) {
+        throw new Error('Decryption failed - invalid data or key');
+      }
+      return JSON.parse(legacyString);
+    } catch (error) {
+      console.error('Error decrypting data:', error);
+      throw error;
     }
   }
 
@@ -253,6 +372,36 @@ class GoogleDriveService {
     }
   }
 
+  async searchFiles(query) {
+    try {
+      const response = await fetch(
+        `${GOOGLE_DRIVE_API}/files?q=${encodeURIComponent(query)}&spaces=drive&pageSize=100`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          return await this.searchFiles(query);
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to search files: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.files || [];
+    } catch (error) {
+      console.error('Error searching files:', error);
+      throw error;
+    }
+  }
+
   // Backup journal entries to Google Drive
   async backupJournal(entries) {
     try {
@@ -260,12 +409,19 @@ class GoogleDriveService {
         throw new Error('Not authenticated');
       }
 
+      // Ensure encryption key is initialized
+      if (!this.encryptionKey) {
+        await this.initializeEncryptionKey();
+      }
+
       // Get or create backup folder
       const folderId = await this.getOrCreateBackupFolder();
 
-      // Delete existing backups to keep only one backup
+      // Delete existing full backups to overwrite
       try {
-        const existingBackups = await this.listBackups();
+        const existingBackups = await this.searchFiles(
+          `'${folderId}' in parents and appProperties has { key='app' and value='journalizer' } and appProperties has { key='type' and value='backup' } and trashed=false`
+        );
         for (const backup of existingBackups) {
           await this.deleteBackup(backup.id);
         }
@@ -273,16 +429,15 @@ class GoogleDriveService {
         console.warn('Could not delete existing backups:', error.message);
       }
 
-      // Create human-readable date format: YYYY-MM-DD_HH-mm-ss
+      // Create human-readable date format: YYYY-MM-DD
       const now = new Date();
       const dateStr = now.toISOString().replace(/[:.]/g, '-').split('T')[0];
-      const timeStr = now.toISOString().split('T')[1].split('.')[0].replace(/:/g, '-');
-      const fileName = `Backup_${dateStr}_${timeStr}.json`;
+      const fileName = `Backup_${dateStr}.json`;
 
       // Step 1: Create file with metadata only
       const metadata = {
         name: fileName,
-        mimeType: 'application/json',
+        mimeType: 'text/plain',
         parents: [folderId],
         appProperties: {
           app: 'journalizer',
@@ -310,18 +465,18 @@ class GoogleDriveService {
 
       // Step 2: Upload content to the dedicated upload endpoint
       // entries parameter already contains the full exported data structure
-      const fileContent = JSON.stringify(entries);
-      const parsedContent = JSON.parse(fileContent);
       
-
+      // Encrypt the data before uploading
+      const encryptedContent = await this.encryptData(entries);
+      
       const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain',
         },
-        body: fileContent,
+        body: encryptedContent,
       });
 
       if (!uploadResponse.ok) {
@@ -348,6 +503,11 @@ class GoogleDriveService {
         throw new Error('No entries selected for backup');
       }
 
+      // Ensure encryption key is initialized
+      if (!this.encryptionKey) {
+        await this.initializeEncryptionKey();
+      }
+
       // Get or create backup folder
       const folderId = await this.getOrCreateBackupFolder();
       const fileIds = [];
@@ -369,16 +529,29 @@ class GoogleDriveService {
           // Sanitize title for filename (remove special characters)
           const sanitizedTitle = entryTitle.substring(0, 50).replace(/[<>:"/\\|?*]/g, '_');
 
-          // Create human-readable date format
-          const now = new Date();
-          const dateStr = now.toISOString().replace(/[:.]/g, '-').split('T')[0];
-          const timeStr = now.toISOString().split('T')[1].split('.')[0].replace(/:/g, '-');
-          const fileName = `${sanitizedTitle}_${dateStr}_${timeStr}.json`;
+          // Use the journal entry's date for filename (YYYY-MM-DD)
+          const entryDate = new Date(actualEntry.date);
+          const dateStr = Number.isNaN(entryDate.getTime())
+            ? new Date().toISOString().split('T')[0]
+            : entryDate.toISOString().split('T')[0];
+          const fileName = `${sanitizedTitle}_${dateStr}.json`;
+
+          // Delete existing backup for this entry to overwrite
+          try {
+            const existingEntryBackups = await this.searchFiles(
+              `'${folderId}' in parents and appProperties has { key='app' and value='journalizer' } and appProperties has { key='type' and value='backup-entry' } and appProperties has { key='entryId' and value='${String(entryId)}' } and trashed=false`
+            );
+            for (const existingBackup of existingEntryBackups) {
+              await this.deleteBackup(existingBackup.id);
+            }
+          } catch (error) {
+            console.warn(`Could not delete existing backup for entry ${entryId}:`, error.message);
+          }
 
           // Create file with metadata
           const metadata = {
             name: fileName,
-            mimeType: 'application/json',
+            mimeType: 'text/plain',
             parents: [folderId],
             appProperties: {
               app: 'journalizer',
@@ -403,17 +576,17 @@ class GoogleDriveService {
           const fileInfo = await createResponse.json();
           const fileId = fileInfo.id;
 
-          // Upload content
-          const fileContent = JSON.stringify(entryData);
+          // Upload content - encrypt before uploading
+          const encryptedContent = await this.encryptData(entryData);
 
           const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
           const uploadResponse = await fetch(uploadUrl, {
             method: 'PATCH',
             headers: {
               'Authorization': `Bearer ${this.accessToken}`,
-              'Content-Type': 'application/json',
+              'Content-Type': 'text/plain',
             },
-            body: fileContent,
+            body: encryptedContent,
           });
 
           if (!uploadResponse.ok) {
@@ -446,7 +619,7 @@ class GoogleDriveService {
 
       // Search for backup files in the folder (all .json files)
       const response = await fetch(
-        `${GOOGLE_DRIVE_API}/files?q='${folderId}' in parents and mimeType='application/json' and trashed=false&spaces=drive&orderBy=createdTime desc`,
+        `${GOOGLE_DRIVE_API}/files?q='${folderId}' in parents and (mimeType='application/json' or mimeType='text/plain') and trashed=false&spaces=drive&orderBy=createdTime desc&fields=files(id,name,modifiedTime,size,appProperties)`,
         {
           headers: {
             'Authorization': `Bearer ${this.accessToken}`,
@@ -480,6 +653,11 @@ class GoogleDriveService {
         throw new Error('Not authenticated');
       }
 
+      // Ensure encryption key is initialized
+      if (!this.encryptionKey) {
+        await this.initializeEncryptionKey();
+      }
+
       const response = await fetch(
         `${GOOGLE_DRIVE_API}/files/${fileId}?alt=media`,
         {
@@ -495,9 +673,24 @@ class GoogleDriveService {
 
       const text = await response.text();
       
-      // Parse the JSON directly
-      const data = JSON.parse(text);
-      return data;
+      // Try to parse as JSON first
+      try {
+        const data = JSON.parse(text);
+        // If this looks like an encrypted payload, decrypt it
+        if (data && data.iv && data.data) {
+          return await this.decryptData(text);
+        }
+        return data;
+      } catch (parseError) {
+        // If JSON parsing fails, it's likely encrypted - try to decrypt
+        try {
+          const decryptedData = await this.decryptData(text);
+          return decryptedData;
+        } catch (decryptError) {
+          console.error('Failed to decrypt backup:', decryptError.message);
+          throw new Error('Failed to decrypt or parse backup file');
+        }
+      }
     } catch (error) {
       console.error('Error downloading backup:', error);
       throw error;

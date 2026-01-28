@@ -21,7 +21,7 @@ import SearchModal from '../components/SearchModal';
 
 // Database
 import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries, exportSingleEntry } from '../database/journalDB';
-import googleDriveService from '../services/googleDriveService';
+import GoogleDriveService from '../services/GoogleDriveService';
 
 export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
@@ -43,6 +43,7 @@ export default function JournalScreen({ navigation }) {
   }, []);
 
   const totalEntriesCount = journalEntries.reduce((sum, group) => sum + (group.entries?.length || 0), 0);
+  const allEntryIds = journalEntries.flatMap((group) => group.entries?.map((entry) => entry.id) || []);
 
   const clearFilters = useCallback(() => {
     setFilters({
@@ -112,17 +113,38 @@ export default function JournalScreen({ navigation }) {
       navigation.setOptions({
         headerTitle: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <View style={{
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              borderRadius: 12,
-              backgroundColor: themeStyle.lightPurple1,
-              minWidth: 72,
-              alignItems: 'center',
-            }}>
-              <Text style={{ color: themeStyle.darkPurple2, fontFamily: 'Montserrat-SemiBold', fontSize: 15 }}>
-                {selectedEntries.size}/{totalEntriesCount || 0}
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <TouchableOpacity
+                onPress={toggleSelectAll}
+                disabled={totalEntriesCount === 0}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
+                  backgroundColor: themeStyle.lightPurple1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: totalEntriesCount === 0 ? 0.5 : 1,
+                }}
+              >
+                <MaterialIcon
+                  name={selectedEntries.size === totalEntriesCount && totalEntriesCount > 0 ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                  size={20}
+                  color={themeStyle.darkPurple2}
+                />
+              </TouchableOpacity>
+              <View style={{
+                paddingVertical: 6,
+                paddingHorizontal: 10,
+                borderRadius: 12,
+                backgroundColor: themeStyle.lightPurple1,
+                minWidth: 72,
+                alignItems: 'center',
+              }}>
+                <Text style={{ color: themeStyle.darkPurple2, fontFamily: 'Montserrat-SemiBold', fontSize: 15 }}>
+                  {selectedEntries.size}/{totalEntriesCount || 0}
+                </Text>
+              </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <TouchableOpacity
@@ -231,7 +253,7 @@ export default function JournalScreen({ navigation }) {
       headerLeft: null,
       headerRight: null,
     });
-  }, [navigation, hasActiveFilters, clearFilters, searchInput, filters, isSelectionMode, selectedEntries, totalEntriesCount, isDeleting, isBackingUp]);
+  }, [navigation, hasActiveFilters, clearFilters, searchInput, filters, isSelectionMode, selectedEntries, totalEntriesCount, isDeleting, isBackingUp, allEntryIds]);
 
   // Function to load and group entries
   const loadEntries = useCallback(async () => {
@@ -371,6 +393,14 @@ export default function JournalScreen({ navigation }) {
     setSelectedEntries(newSelected);
   };
 
+  const toggleSelectAll = () => {
+    if (selectedEntries.size === totalEntriesCount && totalEntriesCount > 0) {
+      setSelectedEntries(new Set());
+      return;
+    }
+    setSelectedEntries(new Set(allEntryIds));
+  };
+
   const handleDeleteSelected = async () => {
     if (selectedEntries.size === 0) {
       Alert.alert('No Selection', 'Please select at least one entry to delete');
@@ -433,7 +463,7 @@ export default function JournalScreen({ navigation }) {
           onPress: async () => {
             setIsBackingUp(true);
             try {
-              const isAuthenticated = await googleDriveService.isAuthenticated();
+              const isAuthenticated = await GoogleDriveService.isAuthenticated();
               if (!isAuthenticated) {
                 Alert.alert('Not Authenticated', 'Please sign in to Google Drive first');
                 setIsBackingUp(false);
@@ -456,7 +486,7 @@ export default function JournalScreen({ navigation }) {
                 return;
               }
 
-              const fileIds = await googleDriveService.backupSelectedEntries(backupDataList);
+              const fileIds = await GoogleDriveService.backupSelectedEntries(backupDataList);
               Alert.alert('Success', `Backed up ${fileIds.length} entries to Google Drive`);
               
               // Clear selection and exit selection mode

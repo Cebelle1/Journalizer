@@ -35,8 +35,9 @@
 5. On the Scopes page, click **"Add or Remove Scopes"**
 6. Find and select: `https://www.googleapis.com/auth/drive.file`
 7. Click **"Update"** and then **"Save and Continue"**
-8. Add test users (your email) and click **"Save and Continue"**
-9. Review and click **"Back to Dashboard"**
+8. For testing: Add test users (your email) and click **"Save and Continue"**
+9. For publishing: Publish app and verify app (optional)
+10. Review and click **"Back to Dashboard"**
 
 ## Step 4: Create OAuth 2.0 Credentials
 
@@ -49,12 +50,12 @@
    - **Name**: `Journalizer Web` (This name is only used to identify the client in the console and will not be shown to end users)
    - **Authorized JavaScript origins**: Leave empty (not needed for this setup)
    - **Authorized redirect URIs**: 
-     - Add: `https://auth.expo.io/@cebelle/Journalizer`
+     - Add: `https://auth.expo.io/@<your_expo_id>/Journalizer`
      - ⚠️ Note: It may take 5 minutes to a few hours for settings to take effect
 5. Click **"Create"**
-6. **Save the Client ID** - this is your main client ID!
+6. **Save the Client ID** - this is the GOOGLE_WEB_CLIENT_ID in the code
 
-### For Android (Additional - Required for production builds):
+### For Android (after installing the apk on phone):
 
 After you build your app with EAS Build, you'll need to add the Android OAuth client:
 
@@ -70,13 +71,15 @@ After you build your app with EAS Build, you'll need to add the Android OAuth cl
 eas credentials
 ```
 
+or from the **eas web > Project Settings > Credentials > com.anonymous.Journalizer > SHA-1Fingerprint**
+
 7. Copy the SHA-1 fingerprint and paste it
 8. Click **"Create"**
 9. This allows OAuth to work on installed APKs
 
 ## Step 5: Configure Your App
 
-1. Open `src/services/googleDriveService.js`
+1. Open `src/services/GoogleDriveService.js`
 2. Replace the placeholder with your Web Client ID:
 
 ```javascript
@@ -137,7 +140,7 @@ expo build:android
 
 ### "Invalid Client" Error
 
-- Double-check your client IDs in `googleDriveService.js`
+- Double-check your client IDs in `GoogleDriveService.js`
 - Make sure you're using the Web Client ID as the main `GOOGLE_CLIENT_ID`
 - Verify the package name matches your Android app
 

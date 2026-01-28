@@ -14,7 +14,7 @@ import Icon from '@expo/vector-icons/Ionicons';
 import MaterialIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { ThemeBackground, themeStyle } from '../styles/theme';
 import { exportAllData, exportSingleEntry, importAllData } from '../database/journalDB';
-import googleDriveService from '../services/googleDriveService';
+import GoogleDriveService from '../services/GoogleDriveService';
 import { format } from 'date-fns';
 
 export default function CloudSyncScreen() {
@@ -24,6 +24,8 @@ export default function CloudSyncScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [backupFiles, setBackupFiles] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedBackupIds, setSelectedBackupIds] = useState([]);
+    const selectionActive = selectedBackupIds.length > 0;
 
     useEffect(() => {
         checkAuthStatus();
@@ -38,7 +40,7 @@ export default function CloudSyncScreen() {
     const checkAuthStatus = async () => {
         try {
             console.log('Checking authentication status...');
-            const authenticated = await googleDriveService.isAuthenticated();
+            const authenticated = await GoogleDriveService.isAuthenticated();
             console.log('Authentication status:', authenticated);
             setIsAuthenticated(authenticated);
             if (authenticated) {
@@ -56,7 +58,7 @@ export default function CloudSyncScreen() {
         
         try {
             console.log('Attempting Google Sign In...');
-            const success = await googleDriveService.authenticate();
+            const success = await GoogleDriveService.authenticate();
             if (success) {
                 console.log('Sign in successful');
                 setIsAuthenticated(true);
@@ -86,7 +88,7 @@ export default function CloudSyncScreen() {
                     onPress: async () => {
                         setIsLoading(true);
                         try {
-                            await googleDriveService.signOut();
+                            await GoogleDriveService.signOut();
                             setIsAuthenticated(false);
                             setBackupFiles([]);
                             Alert.alert('Success', 'Successfully signed out');
@@ -104,8 +106,9 @@ export default function CloudSyncScreen() {
 
     const loadBackupFiles = async () => {
         try {
-            const files = await googleDriveService.listBackups();
+            const files = await GoogleDriveService.listBackups();
             setBackupFiles(files);
+            setSelectedBackupIds((prev) => prev.filter((id) => files.some((file) => file.id === id)));
         } catch (error) {
             console.error('Error loading backup files:', error);
             Alert.alert('Error', 'Failed to load backup files: ' + error.message);
@@ -142,7 +145,7 @@ export default function CloudSyncScreen() {
             }
 
             // Backup each entry as individual file
-            const fileIds = await googleDriveService.backupSelectedEntries(backupDataList);
+            const fileIds = await GoogleDriveService.backupSelectedEntries(backupDataList);
             
             Alert.alert('Success', `Backed up ${fileIds.length} journal entries individually`);
             await loadBackupFiles();
@@ -174,7 +177,7 @@ export default function CloudSyncScreen() {
                         try {
                             for (const file of backupFiles) {
                                 try {
-                                    const backupData = await googleDriveService.downloadBackup(file.id);
+                                    const backupData = await GoogleDriveService.downloadBackup(file.id);
                                     await importAllData(backupData);
                                     restoredCount += 1;
                                 } catch (error) {
@@ -209,7 +212,7 @@ export default function CloudSyncScreen() {
                         setIsLoading(true);
                         try {
                             // Download file from Google Drive
-                            const backupData = await googleDriveService.downloadBackup(fileId);
+                            const backupData = await GoogleDriveService.downloadBackup(fileId);
                             
                             // Import into database - pass the entire backup object
                             await importAllData(backupData);
@@ -239,12 +242,69 @@ export default function CloudSyncScreen() {
                     onPress: async () => {
                         setIsLoading(true);
                         try {
-                            await googleDriveService.deleteBackup(fileId);
+                            await GoogleDriveService.deleteBackup(fileId);
                             Alert.alert('Success', 'Backup deleted successfully');
                             await loadBackupFiles();
                         } catch (error) {
                             console.error('Delete error:', error);
                             Alert.alert('Error', 'Failed to delete backup: ' + error.message);
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const toggleSelectBackup = (fileId) => {
+        setSelectedBackupIds((prev) => {
+            if (prev.includes(fileId)) {
+                return prev.filter((id) => id !== fileId);
+            }
+            return [...prev, fileId];
+        });
+    };
+
+    const toggleSelectAllBackups = () => {
+        if (selectedBackupIds.length === backupFiles.length) {
+            setSelectedBackupIds([]);
+            return;
+        }
+        setSelectedBackupIds(backupFiles.map((file) => file.id));
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedBackupIds.length === 0) {
+            return;
+        }
+
+        Alert.alert(
+            'Delete Backups',
+            `Delete ${selectedBackupIds.length} selected backup(s)?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setIsLoading(true);
+                        let deletedCount = 0;
+                        try {
+                            for (const fileId of selectedBackupIds) {
+                                try {
+                                    await GoogleDriveService.deleteBackup(fileId);
+                                    deletedCount += 1;
+                                } catch (deleteError) {
+                                    console.error('Failed to delete backup:', deleteError);
+                                }
+                            }
+                            setSelectedBackupIds([]);
+                            Alert.alert('Success', `Deleted ${deletedCount} backup(s)`);
+                            await loadBackupFiles();
+                        } catch (error) {
+                            console.error('Bulk delete error:', error);
+                            Alert.alert('Error', 'Failed to delete selected backups: ' + error.message);
                         } finally {
                             setIsLoading(false);
                         }
@@ -261,8 +321,11 @@ export default function CloudSyncScreen() {
     };
 
     const formatFileSize = (bytes) => {
-        if (!bytes) return 'N/A';
-        const kb = bytes / 1024;
+        if (bytes === undefined || bytes === null) return null;
+        const sizeNum = Number(bytes);
+        if (!Number.isFinite(sizeNum)) return null;
+        if (sizeNum === 0) return '0 KB';
+        const kb = sizeNum / 1024;
         const mb = kb / 1024;
         if (mb >= 1) return `${mb.toFixed(2)} MB`;
         return `${kb.toFixed(2)} KB`;
@@ -422,9 +485,37 @@ export default function CloudSyncScreen() {
 
                 {/* Backup Files List */}
                 <View style={cloudSyncStyles.backupListSection}>
-                    <Text style={cloudSyncStyles.sectionTitle}>
-                        Backup Files ({backupFiles.length})
-                    </Text>
+                    <View style={cloudSyncStyles.sectionHeaderRow}>
+                        <Text style={cloudSyncStyles.sectionTitle}>
+                            Backup Files ({backupFiles.length})
+                        </Text>
+                        {backupFiles.length > 0 && selectionActive && (
+                            <View style={cloudSyncStyles.selectionActions}>
+                                <TouchableOpacity
+                                    style={cloudSyncStyles.selectAllButton}
+                                    onPress={toggleSelectAllBackups}
+                                >
+                                    <MaterialIcon
+                                        name={selectedBackupIds.length === backupFiles.length ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                                        size={20}
+                                        color={themeStyle.darkPurple2}
+                                    />
+                                    <Text style={cloudSyncStyles.selectAllText}>Select All</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        cloudSyncStyles.bulkDeleteButton,
+                                        selectedBackupIds.length === 0 && cloudSyncStyles.bulkDeleteButtonDisabled
+                                    ]}
+                                    onPress={handleDeleteSelected}
+                                    disabled={selectedBackupIds.length === 0}
+                                >
+                                    <MaterialIcon name="delete" size={16} color={themeStyle.white} />
+                                    <Text style={cloudSyncStyles.bulkDeleteText}>Delete</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
                     
                     {backupFiles.length === 0 ? (
                         <View style={cloudSyncStyles.emptyState}>
@@ -438,33 +529,57 @@ export default function CloudSyncScreen() {
                         </View>
                     ) : (
                         backupFiles.map((file) => (
-                            <View key={file.id} style={cloudSyncStyles.backupItem}>
+                            <TouchableOpacity
+                                key={file.id}
+                                style={cloudSyncStyles.backupItem}
+                                activeOpacity={0.9}
+                                onLongPress={() => toggleSelectBackup(file.id)}
+                                onPress={() => {
+                                    if (selectedBackupIds.length > 0) {
+                                        toggleSelectBackup(file.id);
+                                    }
+                                }}
+                            >
                                 <View style={cloudSyncStyles.backupItemInfo}>
+                                    {selectionActive && (
+                                        <TouchableOpacity
+                                            style={cloudSyncStyles.checkboxButton}
+                                            onPress={() => toggleSelectBackup(file.id)}
+                                        >
+                                            <MaterialIcon
+                                                name={selectedBackupIds.includes(file.id) ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                                                size={22}
+                                                color={themeStyle.darkPurple2}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
                                     <MaterialIcon name="file-document" size={24} color={themeStyle.darkPurple2} />
                                     <View style={cloudSyncStyles.backupItemDetails}>
                                         <Text style={cloudSyncStyles.backupItemName}>
                                             {file.name}
                                         </Text>
                                         <Text style={cloudSyncStyles.backupItemMeta}>
-                                            {formatDate(file.modifiedTime)} • {formatFileSize(file.size)}
+                                            Saved: {formatDate(file.modifiedTime)} • {formatFileSize(file.size)}
                                         </Text>
                                     </View>
                                 </View>
-                                <View style={cloudSyncStyles.backupItemActions}>
-                                    <TouchableOpacity 
-                                        style={cloudSyncStyles.restoreButton}
-                                        onPress={() => handleRestore(file.id, file.name)}
-                                    >
-                                        <MaterialIcon name="restore" size={20} color={themeStyle.darkPurple2} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity 
-                                        style={cloudSyncStyles.deleteButton}
-                                        onPress={() => handleDeleteBackup(file.id, file.name)}
-                                    >
-                                        <MaterialIcon name="delete" size={20} color={themeStyle.brightBrown} />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
+                                {!selectionActive && (
+                                    <View style={cloudSyncStyles.backupItemActions}>
+                                        <TouchableOpacity 
+                                            style={cloudSyncStyles.restoreButton}
+                                            onPress={() => handleRestore(file.id, file.name)}
+                                        >
+                                            <MaterialIcon name="restore" size={20} color={themeStyle.darkPurple2} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={cloudSyncStyles.deleteButton}
+                                            onPress={() => handleDeleteBackup(file.id, file.name)}
+                                        >
+                                            <MaterialIcon name="delete" size={20} color={themeStyle.brightBrown} />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                         ))
                     )}
                 </View>
@@ -500,7 +615,7 @@ const cloudSyncStyles = StyleSheet.create({
         gap: 15,
     },
     providerCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: 'rgba(236, 31, 31, 0.95)',
         borderRadius: 15,
         padding: 20,
         elevation: 2,
@@ -675,6 +790,50 @@ const cloudSyncStyles = StyleSheet.create({
         marginBottom: 12,
         paddingHorizontal: 5,
     },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 5,
+        marginBottom: 10,
+        gap: 10,
+    },
+    selectionActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    selectAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        borderRadius: 6,
+        backgroundColor: 'rgba(142, 68, 173, 0.1)',
+    },
+    selectAllText: {
+        fontSize: 12,
+        color: themeStyle.darkPurple2,
+        fontWeight: '600',
+    },
+    bulkDeleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: themeStyle.darkPurple2,
+    },
+    bulkDeleteButtonDisabled: {
+        backgroundColor: themeStyle.darkGrey1,
+    },
+    bulkDeleteText: {
+        color: themeStyle.white,
+        fontSize: 12,
+        fontWeight: '600',
+    },
     emptyState: {
         alignItems: 'center',
         paddingVertical: 40,
@@ -697,7 +856,7 @@ const cloudSyncStyles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
         padding: 14,
         borderRadius: 10,
         marginBottom: 10,
@@ -712,6 +871,9 @@ const cloudSyncStyles = StyleSheet.create({
         alignItems: 'center',
         flex: 1,
         gap: 10,
+    },
+    checkboxButton: {
+        padding: 2,
     },
     backupItemDetails: {
         flex: 1,
