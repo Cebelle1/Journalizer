@@ -707,8 +707,8 @@ export const importAllData = async (backup) => {
     // Import tags (update if exists, insert if new)
     for (const tag of actualBackup.tags) {
       await db.runAsync(
-        `INSERT OR REPLACE INTO tags (id, name, createdAt) VALUES (?, ?, ?)`,
-        [tag.id, tag.name, tag.createdAt]
+        `INSERT OR REPLACE INTO tags (id, name, color, createdAt) VALUES (?, ?, ?, ?)`,
+        [tag.id, tag.name, tag.color || '8E44AD', tag.createdAt]
       );
     }
     

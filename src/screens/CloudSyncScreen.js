@@ -409,32 +409,15 @@ export default function CloudSyncScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
             >
-                {/* Header */}
-                <View style={cloudSyncStyles.connectedHeader}>
-                    <View style={cloudSyncStyles.headerTitleRow}>
-                        <View>
-                            <Text style={cloudSyncStyles.mainTitle}>Cloud Sync</Text>
-                            <Text style={cloudSyncStyles.connectedStatus}>
-                                <MaterialIcon name="check-circle" size={14} color={themeStyle.darkPurple2} /> Connected to Google Drive
-                            </Text>
-                        </View>
-                        <TouchableOpacity 
-                            style={cloudSyncStyles.disconnectButton}
-                            onPress={handleSignOut}
-                        >
-                            <Text style={cloudSyncStyles.disconnectButtonText}>Disconnect</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
                 {/* Provider Tab */}
                 <View style={cloudSyncStyles.providerTabContainer}>
                     <View style={cloudSyncStyles.activeProviderCard}>
                         <View style={cloudSyncStyles.providerTabHeader}>
                             <Icon name="logo-google" size={28} color="#4285F4" />
                             <Text style={cloudSyncStyles.activeProviderName}>Google Drive</Text>
-                            <View style={cloudSyncStyles.connectedBadge}>
-                                <Text style={cloudSyncStyles.connectedBadgeText}>Connected</Text>
+                            <View style={cloudSyncStyles.connectedBadgeLarge}>
+                                <MaterialIcon name="check-circle" size={16} color="#10B981" />
+                                <Text style={cloudSyncStyles.connectedStatusText}>Connected</Text>
                             </View>
                         </View>
 
@@ -480,6 +463,15 @@ export default function CloudSyncScreen() {
                                 )}
                             </TouchableOpacity>
                         </View>
+
+                        {/* Disconnect Button */}
+                        <TouchableOpacity 
+                            style={cloudSyncStyles.disconnectButtonBottom}
+                            onPress={handleSignOut}
+                        >
+                            <MaterialIcon name="logout" size={16} color="#DC2626" />
+                            <Text style={cloudSyncStyles.disconnectButtonBottomText}>Disconnect Account</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -692,13 +684,51 @@ const cloudSyncStyles = StyleSheet.create({
     headerTitleRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+    },
+    statusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    connectedBadgeLarge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(16, 185, 129, 0.3)',
+    },
+    connectedStatusText: {
+        fontSize: 12,
+        color: '#059669',
+        fontWeight: '700',
+    },
+    disconnectButtonBottom: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        marginTop: 18,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: 'rgba(220, 38, 38, 0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(220, 38, 38, 0.2)',
+    },
+    disconnectButtonBottomText: {
+        color: '#DC2626',
+        fontSize: 13,
+        fontWeight: '600',
     },
     connectedStatus: {
-        fontSize: 12,
+        fontSize: 14,
         color: themeStyle.darkPurple2,
-        marginTop: 5,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     disconnectButton: {
         paddingVertical: 8,
