@@ -3,6 +3,7 @@ import { useLoadFont } from './src/utils/useLoadResources.js';
 import { AppNavigator } from './src/navigation/AppNavigator.js';
 import PasswordSetupScreen from './src/screens/PasswordSetupScreen.js';
 import { isPasswordInitialized } from './src/services/PasswordService.js';
+import { FontSizeProvider } from './src/context/FontSizeContext.js';
 
 export default function App() {
   const fontsLoaded = useLoadFont();
@@ -30,13 +31,19 @@ export default function App() {
   // If password hasn't been set up, show setup screen
   if (passwordState === 'setup') {
     return (
-      <PasswordSetupScreen 
-        onPasswordSet={() => setPasswordState('initialized')}
-      />
+      <FontSizeProvider>
+        <PasswordSetupScreen 
+          onPasswordSet={() => setPasswordState('initialized')}
+        />
+      </FontSizeProvider>
     );
   }
 
   // Password is initialized, show main app with prompt
-  return <AppNavigator initiallyPasswordVerified={false} />;
+  return (
+    <FontSizeProvider>
+      <AppNavigator initiallyPasswordVerified={false} />
+    </FontSizeProvider>
+  );
 }
 

@@ -40,7 +40,6 @@ export default function CloudSyncScreen() {
 
     const checkAuthStatus = async () => {
         try {
-            console.log('Checking authentication status...');
             const authenticated = await GoogleDriveService.isAuthenticated();
             console.log('Authentication status:', authenticated);
             setIsAuthenticated(authenticated);

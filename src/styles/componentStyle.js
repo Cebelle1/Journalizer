@@ -1,5 +1,56 @@
 import { StyleSheet } from 'react-native';
 import { themeStyle, pastelRainbowTheme } from './theme.js';
+import { calculateFontSize } from '../utils/fontSizeUtils';
+
+export const createDynamicTagStyles = (fontSizeMultiplier) => StyleSheet.create({
+  tagIcon: {
+    marginRight: 5,
+    color: themeStyle.black,
+    size: 20,
+  },
+  tagsContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    marginBottom: 1,
+    flexWrap: 'wrap',
+    },
+  tagBorder: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    margin: 3,
+    borderRadius: 16,
+  },
+  tagText: {
+    fontSize: calculateFontSize(12, fontSizeMultiplier),
+    fontFamily: 'Montserrat-SemiBold',
+    fontWeight: '700',
+  },
+  activeTag: {
+    backgroundColor: themeStyle.darkGrey1,
+    opacity: 1,
+    },
+  activeTagText: {
+    color: themeStyle.white,
+  },
+});
+
+export const createDynamicTagStylesJournalScreen = (fontSizeMultiplier) => StyleSheet.create({
+  tagText: {
+    fontSize: calculateFontSize(12, fontSizeMultiplier),
+    fontWeight: '700',
+  },
+  tagIcon:{
+    color: themeStyle.black,
+    size: 16,
+  },
+  tagBorder: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    margin: 2,
+    marginBottom: 5,
+    borderRadius: 16,
+  },
+});
 
 export const tagStyles = StyleSheet.create({
   tagIcon: {

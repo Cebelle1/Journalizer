@@ -13,6 +13,8 @@ import TagList from '../components/TagList';
 
 // Assets and Styles
 import { themeStyle, ThemeBackground } from '../styles/theme';
+import { calculateFontSize } from '../utils/fontSizeUtils';
+import { useFontSize } from '../context/FontSizeContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 // Used to prevent the keyboard from shifting the background image
@@ -34,6 +36,7 @@ export default function JournalEntryScreen({ navigation, route }){
   const [loading, setLoading] = useState(true);
   const scrollViewRef = useRef(null);
   const [isKeyboardOpen, setKeyboardOpen] = useState(false);
+  const { fontSizeMultiplier } = useFontSize();
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 60 });
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems && viewableItems.length > 0) {
@@ -214,6 +217,9 @@ export default function JournalEntryScreen({ navigation, route }){
     return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
+  // Generate styles with dynamic font sizes
+  const dynamicStyles = createDynamicStyles(fontSizeMultiplier);
+
   return (  
     <ThemeBackground>
       <KeyboardAvoidingView
@@ -221,7 +227,7 @@ export default function JournalEntryScreen({ navigation, route }){
         style={{ flex: 1 }}
       >
       <ScrollView 
-        contentContainerStyle={styles.container}
+        contentContainerStyle={dynamicStyles.container}
         flexGrow={1}
         nestedScrollEnabled={true}
         keyboardDismissMode='interactive'
@@ -231,9 +237,9 @@ export default function JournalEntryScreen({ navigation, route }){
           
           {/* Date Text that expands to Date Picker */}
         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-          <View style={styles.dateContainer}>  
-            <Ionicons name="calendar" size={20} style={styles.dateIcon} />
-            <Text style={styles.dateText}>{date.toDateString()}</Text>
+          <View style={dynamicStyles.dateContainer}>  
+            <Ionicons name="calendar" size={20} style={dynamicStyles.dateIcon} />
+            <Text style={dynamicStyles.dateText}>{date.toDateString()}</Text>
           </View>
           
         </TouchableOpacity>
@@ -270,7 +276,7 @@ export default function JournalEntryScreen({ navigation, route }){
         <TextInput
           placeholder="Title [Optional]"
           placeholderTextColor="#999"
-          style={[styles.input, styles.titleInput]}
+          style={[dynamicStyles.input, dynamicStyles.titleInput]}
           value={title}
           multiline
           numberOfLines={2}
@@ -279,12 +285,12 @@ export default function JournalEntryScreen({ navigation, route }){
 
         {/* Image area */}
         {images.length === 0 ? (
-          <TouchableOpacity onPress={pickImages} style={styles.addBox}>
+          <TouchableOpacity onPress={pickImages} style={dynamicStyles.addBox}>
             <Ionicons name="add-circle-outline" size={24} color="#888" />
-            <Text style={styles.addBoxText}>Add images</Text>
+            <Text style={dynamicStyles.addBoxText}>Add images</Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.carouselContainer}>
+          <View style={dynamicStyles.carouselContainer}>
             <FlatList
               data={images}
               keyExtractor={(_, index) => index.toString()}
@@ -295,16 +301,16 @@ export default function JournalEntryScreen({ navigation, route }){
               decelerationRate="fast"
               snapToInterval={d.width - 30}
               snapToAlignment="center"
-              contentContainerStyle={styles.carouselContent}
+              contentContainerStyle={dynamicStyles.carouselContent}
               onViewableItemsChanged={onViewableItemsChanged.current}
               viewabilityConfig={viewabilityConfig.current}
               renderItem={({ item, index }) => (
-                <View style={styles.carouselItemWrapper}>
+                <View style={dynamicStyles.carouselItemWrapper}>
                   <TouchableOpacity activeOpacity={0.9} onPress={() => openImageViewer(item)}>
-                    <Image source={{ uri: item }} style={styles.carouselImage} />
+                    <Image source={{ uri: item }} style={dynamicStyles.carouselImage} />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.carouselRemoveButton}
+                    style={dynamicStyles.carouselRemoveButton}
                     onPress={() => removeImage(index)}
                   >
                     <Ionicons name="close" size={22} color="#fff" />
@@ -312,9 +318,9 @@ export default function JournalEntryScreen({ navigation, route }){
                 </View>
               )}
             />
-            <Text style={styles.carouselCounter}>{currentImageIndex + 1} / {images.length}</Text>
+            <Text style={dynamicStyles.carouselCounter}>{currentImageIndex + 1} / {images.length}</Text>
             
-            <TouchableOpacity style={styles.carouselAddButton} onPress={pickImages}>
+            <TouchableOpacity style={dynamicStyles.carouselAddButton} onPress={pickImages}>
               <Ionicons name="add" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -324,7 +330,7 @@ export default function JournalEntryScreen({ navigation, route }){
         <TextInput
           placeholder="Write your journal..."
           placeholderTextColor="#999"
-          style={[styles.input, styles.bodyInput]}
+          style={[dynamicStyles.input, dynamicStyles.bodyInput]}
           multiline
           value={body}
           onChangeText={setBody}
@@ -344,13 +350,13 @@ export default function JournalEntryScreen({ navigation, route }){
         animationType="fade"
         onRequestClose={closeImageViewer}
       >
-        <View style={styles.viewerBackdrop}>
-          <TouchableOpacity style={styles.viewerClose} onPress={closeImageViewer}>
+        <View style={dynamicStyles.viewerBackdrop}>
+          <TouchableOpacity style={dynamicStyles.viewerClose} onPress={closeImageViewer}>
             <Ionicons name="close" size={26} color="#fff" />
           </TouchableOpacity>
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={styles.viewerContent}
+            contentContainerStyle={dynamicStyles.viewerContent}
             maximumZoomScale={3}
             minimumZoomScale={1}
             centerContent={true}
@@ -359,7 +365,7 @@ export default function JournalEntryScreen({ navigation, route }){
             {viewerUri && (
               <Image
                 source={{ uri: viewerUri }}
-                style={styles.viewerImage}
+                style={dynamicStyles.viewerImage}
               />
             )}
           </ScrollView>
@@ -368,6 +374,176 @@ export default function JournalEntryScreen({ navigation, route }){
     </ThemeBackground>
   );
 };
+
+const createDynamicStyles = (fontSizeMultiplier) => StyleSheet.create({
+  container: { 
+    padding: 15,
+    flexGrow: 1,
+    paddingBottom: 100, // Add bottom padding so the save button doesn't overlap with the keyboard
+   },
+  dateContainer: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 5,
+  },
+  dateIcon: {
+    marginRight: 5,
+    padding: 5,
+    color: themeStyle.black,
+  },
+  dateText: { 
+    fontSize: calculateFontSize(20, fontSizeMultiplier), 
+    fontFamily: 'Montserrat-Bold',
+    color: themeStyle.black,
+  },
+  input: { 
+    padding: 10, 
+    marginBottom: 10, 
+    borderRadius: 8,
+    backgroundColor: themeStyle.white,
+    textAlignVertical: 'top',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+    },
+  titleInput: { 
+    fontSize: calculateFontSize(20, fontSizeMultiplier),
+    fontFamily: 'Montserrat-Bold',
+    padding: 5,
+    color: themeStyle.black,
+    marginBottom: 10,
+    marginTop: 5,
+   },
+  bodyInput: { 
+    flex: 1,
+    flexGrow: 1,
+    height: '30%',    // Flexible height
+    fontFamily: 'Montserrat-Regular',
+    fontSize: calculateFontSize(16, fontSizeMultiplier),
+  },
+  addBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: themeStyle.white,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#cfcfcf',
+    marginBottom: 14,
+  },
+  addBoxText: {
+    fontSize: calculateFontSize(15, fontSizeMultiplier),
+    fontWeight: '700',
+    color: '#777',
+  },
+  carouselContainer: {
+    marginTop: 10,
+    height: 220,
+    borderRadius: 12,
+    overflow: 'visible',
+    backgroundColor: 'transparent',
+    position: 'relative',
+  },
+  carouselContent: {
+    paddingHorizontal: 0,
+  },
+  carouselItemWrapper: {
+    width: d.width - 30,
+    height: 190,
+    position: 'relative',
+    marginHorizontal: 0,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  carouselImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    resizeMode: 'contain',
+    backgroundColor: '#000',
+  },
+  carouselRemoveButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 18,
+    padding: 6,
+    zIndex: 3,
+  },
+  carouselCounter: {
+    position: 'absolute',
+    top: 10,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    color: '#fff',
+    fontSize: calculateFontSize(12, fontSizeMultiplier),
+    fontWeight: '700',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  carouselAddButton: {
+    position: 'absolute',
+    bottom: 40,
+    right: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    zIndex: 3,
+    borderWidth: 0,
+  },
+  carouselDots: {
+    position: 'absolute',
+    bottom: 10,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  carouselDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  carouselDotActive: {
+    backgroundColor: '#fff',
+    width: 10,
+  },
+  viewerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewerClose: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 5,
+    padding: 10,
+  },
+  viewerContent: {
+    minHeight: '100%',
+    minWidth: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewerImage: {
+    width: d.width,
+    height: d.height,
+    resizeMode: 'contain',
+  },
+});
 
 const styles = StyleSheet.create({
   container: { 

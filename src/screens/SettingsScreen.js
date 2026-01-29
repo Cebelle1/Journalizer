@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { ThemeBackground, themeStyle } from '../styles/theme';
 import { changePassword } from '../services/PasswordService';
+import { useFontSize } from '../context/FontSizeContext';
+import { fontSizePresets, getFontSizeLabel } from '../utils/fontSizeUtils';
 import Icon from '@expo/vector-icons/Ionicons';
 
 export default function SettingsScreen() {
@@ -25,6 +27,7 @@ export default function SettingsScreen() {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const { fontSizeMultiplier, updateFontSize } = useFontSize();
 
     const handleNewPasswordChange = (pwd) => {
         setNewPassword(pwd);
@@ -108,6 +111,52 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Settings Sections */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Display</Text>
+
+                    {/* Font Size Setting */}
+                    <View style={styles.settingItem}>
+                        <View style={styles.settingItemLeft}>
+                            <Icon 
+                                name="text" 
+                                size={24} 
+                                color={themeStyle.darkPurple2}
+                                style={styles.settingIcon}
+                            />
+                            <View>
+                                <Text style={styles.settingItemTitle}>Font Size</Text>
+                                <Text style={styles.settingItemSubtitle}>
+                                    Current: {getFontSizeLabel(fontSizeMultiplier)}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Font Size Options */}
+                    <View style={styles.fontSizeContainer}>
+                        {Object.entries(fontSizePresets).map(([key, multiplier]) => (
+                            <TouchableOpacity
+                                key={key}
+                                style={[
+                                    styles.fontSizeButton,
+                                    fontSizeMultiplier === multiplier && styles.fontSizeButtonActive
+                                ]}
+                                onPress={() => updateFontSize(multiplier)}
+                            >
+                                <Text 
+                                    style={[
+                                        styles.fontSizeButtonText,
+                                        fontSizeMultiplier === multiplier && styles.fontSizeButtonTextActive
+                                    ]}
+                                >
+                                    {getFontSizeLabel(multiplier)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Security Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Security</Text>
 
@@ -622,6 +671,36 @@ const styles = StyleSheet.create({
     updateButtonText: {
         fontSize: 14,
         fontWeight: '700',
+        color: themeStyle.white,
+    },
+    fontSizeContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 10,
+        marginTop: 12,
+        marginBottom: 20,
+    },
+    fontSizeButton: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        borderWidth: 1.5,
+        borderColor: 'rgba(142, 68, 173, 0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fontSizeButtonActive: {
+        backgroundColor: themeStyle.darkPurple2,
+        borderColor: themeStyle.darkPurple2,
+    },
+    fontSizeButtonText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: themeStyle.darkPurple2,
+    },
+    fontSizeButtonTextActive: {
         color: themeStyle.white,
     },
 });

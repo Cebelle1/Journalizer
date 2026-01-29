@@ -13,10 +13,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
-import { tagStylesJournalScreen, entryStyles, deleteStyle, navigatorStyles, headerSearchStyles, fabStyles, emptyStateStyles } from '../styles/componentStyle';
+import { createDynamicTagStylesJournalScreen, entryStyles, deleteStyle, navigatorStyles, headerSearchStyles, fabStyles, emptyStateStyles } from '../styles/componentStyle';
 
 // Component and Util
 import { formatYearMonthDay, formatYearMonthDayTime } from '../utils/dataUtils';
+import { calculateFontSize } from '../utils/fontSizeUtils';
+import { useFontSize } from '../context/FontSizeContext';
 import TagList from '../components/TagList';
 import SearchModal from '../components/SearchModal';
 
@@ -33,6 +35,7 @@ export default function JournalScreen({ navigation }) {
   const [selectedEntries, setSelectedEntries] = useState(new Set());
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { fontSizeMultiplier } = useFontSize();
   const [filters, setFilters] = useState({
     dateRange: { startDate: null, endDate: null},
     tags: [],
@@ -529,11 +532,11 @@ export default function JournalScreen({ navigation }) {
     );
   };
 
-  const renderItem = ({ item }) => {
+  const renderItem = ({ item }, dynamicStyles) => {
     if (item.year) {
       {/* Year Divider */}
       return (
-        <Text style={styles.yearDivider}>{item.year}</Text>
+        <Text style={dynamicStyles.yearDivider}>{item.year}</Text>
       );
     }
 
@@ -544,7 +547,7 @@ export default function JournalScreen({ navigation }) {
     return (
       <TouchableOpacity
         key={entry.id}
-        style={[styles.entry, isSelected && { backgroundColor: themeStyle.lightPurple1 }]} 
+        style={[dynamicStyles.entry, isSelected && { backgroundColor: themeStyle.lightPurple1 }]} 
         onLongPress={() => {
           if (!isSelectionMode) {
             setIsSelectionMode(true);
@@ -571,24 +574,24 @@ export default function JournalScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <View>
                 {/* Title and Date */}
-                <View style={styles.entryTextContainer}>
-                  <Text style={styles.entryTextTitle} numberOfLines={1}>
+                <View style={dynamicStyles.entryTextContainer}>
+                  <Text style={dynamicStyles.entryTextTitle} numberOfLines={1}>
                     {entry.title}
                   </Text>
-                  <Text style={styles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
+                  <Text style={dynamicStyles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
                 </View>
 
                 {/* Tags */}
-                <View style={styles.entryTextContainer}>
+                <View style={dynamicStyles.entryTextContainer}>
                   <TagList
                     tags={entry.tags || []}
-                    style={tagStylesJournalScreen} />
+                    style={dynamicTagStyles} />
                 </View>
 
                 <View style={entryStyles.divider} />
 
                 {/* Body */ }
-                <Text style={styles.entryText} numberOfLines={6}>
+                <Text style={dynamicStyles.entryText} numberOfLines={6}>
                   {entry.body}
                 </Text>
             </View>
@@ -601,6 +604,10 @@ export default function JournalScreen({ navigation }) {
   if (loading) {
     return <ActivityIndicator size="large" color="#0000ff" />;
   }
+
+  // Generate styles with dynamic font sizes
+  const dynamicStyles = createStyles(fontSizeMultiplier);
+  const dynamicTagStyles = createDynamicTagStylesJournalScreen(fontSizeMultiplier);
 
   const flatListData = journalEntries.flatMap((yearGroup) => [
     { year: yearGroup.year, id: yearGroup.year }, // Year Divider
@@ -622,10 +629,10 @@ export default function JournalScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={dynamicStyles.scrollContainer}
           data={flatListData}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}                         // Main Entry contents
+          renderItem={(itemData) => renderItem(itemData, dynamicStyles)}                         // Main Entry contents
         />
       )}
 
@@ -644,6 +651,50 @@ export default function JournalScreen({ navigation }) {
 
   );
 }
+
+const createStyles = (fontSizeMultiplier) => StyleSheet.create({
+  scrollContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  yearDivider: {
+    fontSize: calculateFontSize(30, fontSizeMultiplier),
+    color: themeStyle.black,
+    fontFamily: 'Montserrat-Bold',
+    paddingVertical: 5,
+    textAlign: 'center',
+  },
+  entry: {
+    backgroundColor: themeStyle.white,
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  entryTextContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  entryTextTitle: {
+    fontSize: calculateFontSize(19, fontSizeMultiplier),
+    color: themeStyle.black,
+    fontFamily: 'Montserrat-Bold',
+    flexShrink: 1,
+  },
+  entryTextDate: {
+    fontSize: calculateFontSize(16, fontSizeMultiplier),
+    color: themeStyle.black,
+    fontFamily: 'Montserrat-Bold',
+  },
+  entryText: {
+    fontSize: calculateFontSize(14, fontSizeMultiplier),
+    color: themeStyle.black,
+    fontFamily: 'Montserrat-Regular',
+  },
+});
 
 const styles = StyleSheet.create({
   scrollContainer: {
