@@ -8,27 +8,35 @@ import {
   Modal,
   TouchableOpacity,
   Alert,
+  ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { themeStyle } from '../styles/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readUniqueTags } from '../database/journalDB';
 
-export default function SearchModal({ visible, onClose, onApplyFilters }) {
+export default function SearchModal({ visible, onClose, onApplyFilters, currentFilters }) {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [tags, setTags] = useState('');
+  const [selectedTagNames, setSelectedTagNames] = useState([]);
   const [searchTitle, setSearchTitle] = useState('');
   const [availableTags, setAvailableTags] = useState([]);
 
-  // Load available tags when modal opens
+  // Load available tags and populate with current filters when modal opens
   useEffect(() => {
     if (visible) {
       loadAvailableTags();
+      // Pre-populate fields with current filters
+      if (currentFilters) {
+        setStartDate(currentFilters.dateRange?.startDate || null);
+        setEndDate(currentFilters.dateRange?.endDate || null);
+        setSelectedTagNames(currentFilters.tags || []);
+        setSearchTitle(currentFilters.searchTitle || '');
+      }
     }
-  }, [visible]);
+  }, [visible, currentFilters]);
 
   const loadAvailableTags = async () => {
     try {
@@ -47,23 +55,9 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
       return;
     }
 
-    if( !startDate && !endDate && !tags && !searchTitle){
+    if( !startDate && !endDate && selectedTagNames.length === 0 && !searchTitle){
       Alert.alert('No Filter', 'Please apply at least one filter');
       return;
-    }
-
-    // Validate tags - check if entered tags exist
-    const enteredTags = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
-    if (enteredTags.length > 0) {
-      const availableTagNames = availableTags.map(t => typeof t === 'string' ? t : t.name);
-      const invalidTags = enteredTags.filter(tag => !availableTagNames.includes(tag));
-      if (invalidTags.length > 0) {
-        Alert.alert(
-          'Invalid Tags',
-          `The following tags don't exist:\n\n${invalidTags.join(', ')}\n\nAvailable tags:\n${availableTagNames.join(', ')}`
-        );
-        return;
-      }
     }
 
     // If only start date is given, use today as end date
@@ -76,7 +70,7 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
     
     onApplyFilters({    // Passes back to onApplyFilters back in JournalScreen.js
       dateRange: { startDate: finalStartDate, endDate: finalEndDate },
-      tags: enteredTags,
+      tags: selectedTagNames,
       searchTitle,
     });
     
@@ -87,7 +81,7 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
   const resetSelection = () => {
     setStartDate(null);
     setEndDate(null);
-    setTags('');
+    setSelectedTagNames([]);
     setSearchTitle('');
     onClose();
   }
@@ -153,57 +147,75 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
 
           </View>
 
-          {/* Tags */}
-          <Text style={styles.label}>Tags (comma-separated):</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., work, personal"
-            value={tags}
-            onChangeText={setTags}
-            placeholderTextColor="#999"
-          />
+          {/* Tags Selection */}
+          <Text style={styles.label}>Tags (click to select):</Text>
           
           {/* Available tags helper */}
           {availableTags.length > 0 && (
             <View style={styles.availableTagsContainer}>
               <Text style={styles.availableTagsLabel}>Available tags:</Text>
-              <View style={styles.availableTagsDisplay}>
+              <ScrollView 
+                style={styles.availableTagsScroll}
+                contentContainerStyle={styles.availableTagsDisplay}
+                showsVerticalScrollIndicator={true}
+              >
               {availableTags.map((tag, index) => {
                 const tagName = typeof tag === 'string' ? tag : tag.name;
                 const tagColor = typeof tag === 'string' ? '#8E44AD' : (tag.color || '#8E44AD');
+                const isSelected = selectedTagNames.includes(tagName);
                 return (
                   <TouchableOpacity
                     key={index}
-                    style={[styles.availableTag, { backgroundColor: `${tagColor}20`, borderColor: tagColor }]}
+                    style={[
+                      styles.availableTag, 
+                      { 
+                        backgroundColor: isSelected ? tagColor : `${tagColor}20`, 
+                        borderColor: tagColor,
+                        borderWidth: isSelected ? 2 : 1,
+                      }
+                    ]}
                     onPress={() => {
-                      // Add clicked tag to input
-                      const currentTags = tags.split(',').map(t => t.trim()).filter(Boolean);
-                      if (!currentTags.includes(tagName)) {
-                        setTags(currentTags.length > 0 ? `${tags}, ${tagName}` : tagName);
+                      if (isSelected) {
+                        setSelectedTagNames(selectedTagNames.filter(t => t !== tagName));
+                      } else {
+                        setSelectedTagNames([...selectedTagNames, tagName]);
                       }
                     }}
                   >
-                    <Text style={[styles.availableTagText, { color: tagColor }]}>{tagName}</Text>
+                    <Text style={[styles.availableTagText, { color: isSelected ? '#fff' : tagColor }]}>{tagName}</Text>
                   </TouchableOpacity>
                 );
               })}
-              </View>
+              </ScrollView>
             </View>
           )}
 
-          {tags.length > 0 && (
+          {/* Selected tags display */}
+          {selectedTagNames.length > 0 && (
             <View style={styles.selectedTagsContainer}>
               <Text style={styles.selectedTagsLabel}>Selected Tags:</Text>
-              <View style={styles.tagsDisplay}>
-                {tags.split(',').map((tag, index) => {
-                  const trimmedTag = tag.trim();
-                  return trimmedTag ? (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{trimmedTag}</Text>
-                    </View>
-                  ) : null;
+              <ScrollView
+                style={styles.selectedTagsScroll}
+                contentContainerStyle={[styles.tagsDisplay, { paddingRight: 8 }]}
+                showsVerticalScrollIndicator={true}
+              >
+                {selectedTagNames.map((tagName, index) => {
+                  const tag = availableTags.find(t => (typeof t === 'string' ? t : t.name) === tagName);
+                  const tagColor = typeof tag === 'string' ? '#8E44AD' : (tag?.color || '#8E44AD');
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.selectedTag, { backgroundColor: tagColor }]}
+                      onPress={() => {
+                        setSelectedTagNames(selectedTagNames.filter(t => t !== tagName));
+                      }}
+                    >
+                      <Text style={styles.selectedTagText}>{tagName}</Text>
+                      <Ionicons name="close" size={14} color="#fff" style={{ marginLeft: 4 }} />
+                    </TouchableOpacity>
+                  );
                 })}
-              </View>
+              </ScrollView>
             </View>
           )}
 
@@ -221,8 +233,12 @@ export default function SearchModal({ visible, onClose, onApplyFilters }) {
             <TouchableOpacity
               style={[styles.button, styles.clearButton]}
               onPress={() => {
-                resetSelection();
-                onClose();
+                // Clear filters and apply
+                onApplyFilters({
+                  dateRange: { startDate: null, endDate: null },
+                  tags: [],
+                  searchTitle: '',
+                });
               }}
             >
               <Ionicons name="refresh" size={18} color="#666" style={{ marginRight: 6 }} />
@@ -349,16 +365,26 @@ const styles = StyleSheet.create({
   selectedTagsContainer: {
     width: '100%',
     marginBottom: 20,
+    padding: 12,
+    backgroundColor: '#f8f0ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0d0ff',
+    overflow: 'hidden',
   },
   selectedTagsLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b3fa0',
     marginBottom: 8,
+  },
+  selectedTagsScroll: {
+    maxHeight: 100,
   },
   tagsDisplay: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 5,
   },
   tag: {
     backgroundColor: '#007AFF',
@@ -369,6 +395,19 @@ const styles = StyleSheet.create({
   tagText: {
     color: '#fff',
     fontSize: 12,
+  },
+  selectedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  selectedTagText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '500',
+    flexShrink: 1,
   },
   availableTagsContainer: {
     width: '100%',
@@ -384,6 +423,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0066cc',
     marginBottom: 8,
+  },
+  availableTagsScroll: {
+    maxHeight: 120,
   },
   availableTagsDisplay: {
     flexDirection: 'row',

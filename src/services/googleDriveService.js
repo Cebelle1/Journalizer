@@ -18,6 +18,7 @@ class GoogleDriveService {
     this.idToken = null;
     this.userInfo = null;
     this.encryptionKey = null;
+    this.isAuthenticating = false;
     this.initializeGoogleSignIn();
   }
 
@@ -111,37 +112,50 @@ class GoogleDriveService {
   // Check if authenticated
   async isAuthenticated() {
     try {
+      // Prevent concurrent calls
+      if (this.isAuthenticating) {
+        console.log('Authentication check already in progress, waiting...');
+        return false;
+      }
+
       // If we already have valid access token, use it
       if (this.accessToken) {
         return true;
       }
-      
-      // Try to get current user
+
+      this.isAuthenticating = true;
+
       try {
-        const userInfo = await GoogleSignin.getCurrentUser();
-        if (userInfo) {
-          this.userInfo = userInfo;
-          // Get fresh tokens
-          try {
-            const tokens = await GoogleSignin.getTokens();
-            this.accessToken = tokens.accessToken;
-            this.idToken = tokens.idToken;
-            return true;
-          } catch (tokenError) {
-            console.error('Error getting tokens:', tokenError);
-            // Try initialize from storage
-            return await this.initialize();
+        // Try to get current user
+        try {
+          const userInfo = await GoogleSignin.getCurrentUser();
+          if (userInfo) {
+            this.userInfo = userInfo;
+            // Get fresh tokens
+            try {
+              const tokens = await GoogleSignin.getTokens();
+              this.accessToken = tokens.accessToken;
+              this.idToken = tokens.idToken;
+              return true;
+            } catch (tokenError) {
+              console.error('Error getting tokens:', tokenError);
+              // Try initialize from storage
+              return await this.initialize();
+            }
           }
+        } catch (userError) {
+          // ignore
         }
-      } catch (userError) {
-        // ignore
+        
+        // Fallback: check stored tokens
+        const initialized = await this.initialize();
+        return initialized;
+      } finally {
+        this.isAuthenticating = false;
       }
-      
-      // Fallback: check stored tokens
-      const initialized = await this.initialize();
-      return initialized;
     } catch (error) {
       console.error('Error checking authentication:', error);
+      this.isAuthenticating = false;
       return false;
     }
   }

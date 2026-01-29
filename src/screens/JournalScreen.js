@@ -5,6 +5,7 @@ import {
   Alert, ActivityIndicator,
   TextInput,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -69,41 +70,60 @@ export default function JournalScreen({ navigation }) {
     if (hasActiveFilters) {
       if (filters.tags.length > 0) {
         filterComponents.push(
-          <Text key="tags">
-            <Text style={{ color: '#999', fontSize: 13 }}>tags: </Text>
-            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>{filters.tags.join(', ')}</Text>
-          </Text>
+          <View key="tags" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+            <Text style={{ color: '#999', fontSize: 12 }}>tags:</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap', flexShrink: 1 }}>
+              {filters.tags.slice(0, 3).map((tag, idx) => (
+                <View 
+                  key={idx}
+                  style={{ 
+                    backgroundColor: '#8E44AD20',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 6,
+                    borderWidth: 0.5,
+                    borderColor: '#8E44AD'
+                  }}
+                >
+                  <Text style={{ color: '#8E44AD', fontSize: 11, fontWeight: '600' }} numberOfLines={1}>{tag}</Text>
+                </View>
+              ))}
+              {filters.tags.length > 3 && (
+                <Text style={{ color: '#8E44AD', fontSize: 11, fontWeight: '600' }}>+{filters.tags.length - 3}</Text>
+              )}
+            </View>
+          </View>
         );
       }
       if (filters.searchTitle) {
         filterComponents.push(
-          <Text key="title">
-            <Text style={{ color: '#999', fontSize: 13 }}>title: </Text>
-            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>&quot;{filters.searchTitle}&quot;</Text>
-          </Text>
+          <View key="title" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+            <Text style={{ color: '#999', fontSize: 12 }}>title:</Text>
+            <Text style={{ color: '#333', fontSize: 12, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>&quot;{filters.searchTitle}&quot;</Text>
+          </View>
         );
       }
       if (filters.dateRange.startDate && filters.dateRange.endDate) {
         filterComponents.push(
-          <Text key="date">
-            <Text style={{ color: '#999', fontSize: 13 }}>date: </Text>
-            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>
+          <Text key="date" style={{ flexShrink: 1 }}>
+            <Text style={{ color: '#999', fontSize: 12 }}>date: </Text>
+            <Text style={{ color: '#333', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
               {filters.dateRange.startDate.toLocaleDateString()} - {filters.dateRange.endDate.toLocaleDateString()}
             </Text>
           </Text>
         );
       } else if (filters.dateRange.startDate) {
         filterComponents.push(
-          <Text key="date">
-            <Text style={{ color: '#999', fontSize: 13 }}>from: </Text>
-            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>{filters.dateRange.startDate.toLocaleDateString()}</Text>
+          <Text key="date" style={{ flexShrink: 1 }}>
+            <Text style={{ color: '#999', fontSize: 12 }}>from: </Text>
+            <Text style={{ color: '#333', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{filters.dateRange.startDate.toLocaleDateString()}</Text>
           </Text>
         );
       } else if (filters.dateRange.endDate) {
         filterComponents.push(
-          <Text key="date">
-            <Text style={{ color: '#999', fontSize: 13 }}>until: </Text>
-            <Text style={{ color: '#333', fontSize: 13, fontWeight: '600' }}>{filters.dateRange.endDate.toLocaleDateString()}</Text>
+          <Text key="date" style={{ flexShrink: 1 }}>
+            <Text style={{ color: '#999', fontSize: 12 }}>until: </Text>
+            <Text style={{ color: '#333', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{filters.dateRange.endDate.toLocaleDateString()}</Text>
           </Text>
         );
       }
@@ -221,14 +241,19 @@ export default function JournalScreen({ navigation }) {
         >
           <Ionicons name="search-outline" size={20} style={headerSearchStyles.searchIcon} />
           {hasActiveFilters ? (
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              style={{ flex: 1 }}
+            >
               {filterComponents.map((component, index) => (
                 <React.Fragment key={index}>
                   {component}
-                  {index < filterComponents.length - 1 && <Text style={{ color: '#999', fontSize: 13 }}> • </Text>}
+                  {index < filterComponents.length - 1 && <Text style={{ color: '#999', fontSize: 12 }}>•</Text>}
                 </React.Fragment>
               ))}
-            </View>
+            </ScrollView>
           ) : (
             <Text style={[headerSearchStyles.searchInput, { color: '#999' }]} numberOfLines={1}>
               Search entries...
@@ -613,6 +638,7 @@ export default function JournalScreen({ navigation }) {
         visible={searchModalVisible}
         onClose={() => setSearchModalVisible(false)}
         onApplyFilters={onApplyFilters}
+        currentFilters={filters}
       />
     </ThemeBackground>
 

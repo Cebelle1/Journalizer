@@ -30,6 +30,8 @@ export default function TagsScreen() {
   const [adding, setAdding] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedTagNames, setSelectedTagNames] = useState([]);
+  const selectionActive = selectedTagNames.length > 0;
 
   // Load all tags on component mount
   useEffect(() => {
@@ -49,12 +51,71 @@ export default function TagsScreen() {
       const uniqueTags = await readUniqueTags();
       console.log('Loaded tags from readUniqueTags:', uniqueTags);
       setTags(uniqueTags || []);
+      // Clear selection if tags change
+      setSelectedTagNames((prev) => prev.filter((name) => uniqueTags.some((tag) => tag.name === name)));
     } catch (error) {
       console.error('Error loading tags:', error);
       Alert.alert('Error', 'Failed to load tags');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleSelectTag = (tagName) => {
+    setSelectedTagNames((prev) => {
+      if (prev.includes(tagName)) {
+        return prev.filter((name) => name !== tagName);
+      }
+      return [...prev, tagName];
+    });
+  };
+
+  const toggleSelectAllTags = () => {
+    if (selectedTagNames.length === filteredTags.length) {
+      setSelectedTagNames([]);
+      return;
+    }
+    setSelectedTagNames(filteredTags.map((tag) => tag.name));
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedTagNames.length === 0) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete Tags',
+      `Are you sure you want to delete ${selectedTagNames.length} selected tag(s)? This will remove them from all entries.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting('multiple');
+            let deletedCount = 0;
+            try {
+              for (const tagName of selectedTagNames) {
+                try {
+                  await deleteTagFromAllEntries(tagName);
+                  deletedCount += 1;
+                } catch (deleteError) {
+                  console.error(`Failed to delete tag ${tagName}:`, deleteError);
+                }
+              }
+              setSelectedTagNames([]);
+              Alert.alert('Success', `Deleted ${deletedCount} tag(s)`);
+              await loadTags();
+            } catch (error) {
+              console.error('Bulk delete error:', error);
+              Alert.alert('Error', 'Failed to delete selected tags');
+            } finally {
+              setDeleting(null);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleDeleteTag = (tagName) => {
@@ -210,33 +271,91 @@ export default function TagsScreen() {
           </View>
         ) : (
           <View style={styles.tagsList}>
+            {filteredTags.length > 0 && selectionActive && (
+              <View style={styles.selectionHeader}>
+                <TouchableOpacity
+                  style={styles.selectAllButton}
+                  onPress={toggleSelectAllTags}
+                >
+                  <Ionicons
+                    name={selectedTagNames.length === filteredTags.length ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={themeStyle.darkPurple2}
+                  />
+                  <Text style={styles.selectAllText}>Select All</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.bulkDeleteButton,
+                    selectedTagNames.length === 0 && styles.bulkDeleteButtonDisabled
+                  ]}
+                  onPress={handleDeleteSelected}
+                  disabled={selectedTagNames.length === 0 || deleting === 'multiple'}
+                >
+                  {deleting === 'multiple' ? (
+                    <ActivityIndicator size="small" color={themeStyle.white} />
+                  ) : (
+                    <>
+                      <Ionicons name="trash" size={16} color={themeStyle.white} />
+                      <Text style={styles.bulkDeleteText}>Delete ({selectedTagNames.length})</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
             {filteredTags.map(tag => (
-              <View key={tag.name} style={styles.tagItemContainer}>
+              <TouchableOpacity
+                key={tag.name}
+                style={styles.tagItemContainer}
+                activeOpacity={0.9}
+                onLongPress={() => toggleSelectTag(tag.name)}
+                onPress={() => {
+                  if (selectionActive) {
+                    toggleSelectTag(tag.name);
+                  }
+                }}
+              >
+                {selectionActive && (
+                  <TouchableOpacity
+                    style={styles.checkboxButton}
+                    onPress={() => toggleSelectTag(tag.name)}
+                  >
+                    <Ionicons
+                      name={selectedTagNames.includes(tag.name) ? 'checkbox' : 'square-outline'}
+                      size={22}
+                      color={themeStyle.darkPurple2}
+                    />
+                  </TouchableOpacity>
+                )}
                 <View style={styles.tagContent}>
                   <TouchableOpacity
                     style={[styles.colorDot, { backgroundColor: tag.color }]}
                     onPress={() => {
-                      setEditingTag(tag.name);
-                      setShowColorPicker(true);
+                      if (!selectionActive) {
+                        setEditingTag(tag.name);
+                        setShowColorPicker(true);
+                      }
                     }}
                   />
                   <Text style={styles.tagName}>{tag.name}</Text>
                 </View>
-                <TouchableOpacity
-                  style={[
-                    styles.deleteButton,
-                    deleting === tag.name && styles.deleteButtonDisabled,
-                  ]}
-                  onPress={() => handleDeleteTag(tag.name)}
-                  disabled={deleting === tag.name}
-                >
-                  {deleting === tag.name ? (
-                    <ActivityIndicator size="small" color="#FF3B30" />
-                  ) : (
-                    <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                  )}
-                </TouchableOpacity>
-              </View>
+                {!selectionActive && (
+                  <TouchableOpacity
+                    style={[
+                      styles.deleteButton,
+                      deleting === tag.name && styles.deleteButtonDisabled,
+                    ]}
+                    onPress={() => handleDeleteTag(tag.name)}
+                    disabled={deleting === tag.name}
+                  >
+                    {deleting === tag.name ? (
+                      <ActivityIndicator size="small" color="#FF3B30" />
+                    ) : (
+                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                    )}
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -250,7 +369,7 @@ export default function TagsScreen() {
       {/* Add Tag Modal */}
       {showAddModal && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={styles.modalContentLarge}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create New Tag</Text>
               <TouchableOpacity onPress={() => {
@@ -271,26 +390,87 @@ export default function TagsScreen() {
               editable={!adding}
             />
 
-            <View style={styles.colorPickerSection}>
-              <Text style={styles.colorPickerLabel}>Choose a color:</Text>
-              <View style={styles.colorGrid}>
-                {['#8E44AD', '#3498DB', '#E74C3C', '#F39C12', '#16A085', '#D35400', '#C0392B', '#2980B9', '#27AE60', '#8E44AD'].map((color) => (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Warm Colors */}
+              <Text style={styles.colorCategoryTitle}>Warm Colors</Text>
+              <View style={styles.colorGridLarge}>
+                {['#821A1A', '#E74C3C', '#FFA07A', '#FF9900', '#FFD93D', '#FFF3D1'].map((color) => (
                   <TouchableOpacity
                     key={color}
                     style={[
-                      styles.colorOption,
+                      styles.colorOptionLarge,
                       { backgroundColor: color },
                       newTagColor === color && styles.colorOptionSelected
                     ]}
                     onPress={() => setNewTagColor(color)}
                   >
                     {newTagColor === color && (
-                      <Ionicons name="checkmark" size={20} color={themeStyle.white} />
+                      <Ionicons name="checkmark" size={24} color={themeStyle.white} />
                     )}
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
+
+              {/* Cool Colors */}
+              <Text style={styles.colorCategoryTitle}>Cool Colors</Text>
+              <View style={styles.colorGridLarge}>
+                {['#141480', '#0059ff', '#00CED1', '#007222', '#01b94e', '#93f393'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOptionLarge,
+                      { backgroundColor: color },
+                      newTagColor === color && styles.colorOptionSelected
+                    ]}
+                    onPress={() => setNewTagColor(color)}
+                  >
+                    {newTagColor === color && (
+                      <Ionicons name="checkmark" size={24} color={themeStyle.white} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Purple & Pink Colors */}
+              <Text style={styles.colorCategoryTitle}>Purple & Pink</Text>
+              <View style={styles.colorGridLarge}>
+                {['#7300a0', '#ec47f1', '#ebb1fa', '#ca00b9', '#DA70D6', '#C39BD3'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOptionLarge,
+                      { backgroundColor: color },
+                      newTagColor === color && styles.colorOptionSelected
+                    ]}
+                    onPress={() => setNewTagColor(color)}
+                  >
+                    {newTagColor === color && (
+                      <Ionicons name="checkmark" size={24} color={themeStyle.white} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Neutral Colors */}
+              <Text style={styles.colorCategoryTitle}>Neutral Colors</Text>
+              <View style={styles.colorGridLarge}>
+                {['#34495E', '#546E7A', '#607D8B', '#7F8C8D', '#95A5A6', '#000000'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOptionLarge,
+                      { backgroundColor: color },
+                      newTagColor === color && styles.colorOptionSelected
+                    ]}
+                    onPress={() => setNewTagColor(color)}
+                  >
+                    {newTagColor === color && (
+                      <Ionicons name="checkmark" size={24} color={themeStyle.white} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -465,6 +645,49 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16,
     paddingBottom: 80,
+  },
+  selectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(142, 68, 173, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(142, 68, 173, 0.2)',
+  },
+  selectAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  selectAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: themeStyle.darkPurple2,
+  },
+  bulkDeleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  bulkDeleteButtonDisabled: {
+    opacity: 0.5,
+  },
+  bulkDeleteText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: themeStyle.white,
+  },
+  checkboxButton: {
+    padding: 4,
+    marginRight: 8,
   },
   tagItemContainer: {
     flexDirection: 'row',

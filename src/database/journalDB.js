@@ -159,6 +159,16 @@ const runMigrations = async (db) => {
       await db.runAsync(`ALTER TABLE tags ADD COLUMN color TEXT DEFAULT '8E44AD'`);
       console.log('✓ Successfully added color column to tags table');
     }
+
+    // Check if images column exists in journal_entries table
+    const entriesTableInfo = await db.getAllAsync("PRAGMA table_info(journal_entries)");
+    const hasImagesColumn = entriesTableInfo.some(col => col.name === 'images');
+    
+    if (!hasImagesColumn) {
+      console.log('Adding images column to journal_entries table...');
+      await db.runAsync(`ALTER TABLE journal_entries ADD COLUMN images TEXT`);
+      console.log('✓ Successfully added images column to journal_entries table');
+    }
   } catch (error) {
     console.error('✗ Error running migrations:', error);
     // Don't throw - migrations are not critical
