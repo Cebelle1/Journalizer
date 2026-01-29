@@ -2,6 +2,10 @@
 
 A privacy-focused journaling app for Android that keeps your thoughts secure and organized.
 
+## 💡 Why Journalizer?
+
+In an age where everything is cloud-synced automatically, Journalizer takes a different approach. Your journal is personal, and you should have complete control over where it lives and who can access it. That's why I built Journalizer with local storage first, giving you the option to backup only when you choose to, and only the entries you want to backup.
+
 ## ✨ Features
 
 ### 🔒 Privacy First
@@ -22,29 +26,28 @@ A privacy-focused journaling app for Android that keeps your thoughts secure and
 - **Color-Coded Tags** - Visual organization with customizable tag colors
 
 ### ☁️ Cloud Backup (Optional)
-- **Google Drive Integration** - Optional backup to Google Drive
-- **One Drive Integration (To-do)** - Optional backup to One Drive
-- **Individual Entry Backup** - Backup selected entries as separate files
-- **Easy Restore** - Restore individual backups or all at once
-- **Merge-Friendly** - Restores merge with local data, keeping local-only entries
-- **Encrypted Backups** - Files are encrypted on the Cloud to prevent external parties from reading it directly
+- **Google Drive Integration** - Optionally backup entries to Google Drive
+- **Individual Entry Backup** - Backup selected entries or all entries at once
+- **Easy Restore** - Restore individual backups or batch restore all
+- **Merge-Friendly** - Restored entries merge with local data, keeping local-only entries intact
+- **End-to-End Encrypted** - Files encrypted on cloud with AES-256 encryption before upload
 
 ### 🎨 User Experience
 - **Clean Interface** - Beautiful gradient themes with intuitive navigation
 - **Dark Theme Support** - Easy on the eyes for night journaling
 - **Smooth Navigation** - Drawer navigation for quick access to all features
 - **Offline First** - Works perfectly without internet connection
-- **Customizable Font Size** - Adjust text size to your preference (Small, Medium, Large) directly from Settings
+- **Customizable Font Size** - Adjust text size (Small, Medium, Large) directly from Settings
 - **Live Preview** - See font size changes in real-time before applying
 
 ## 🔐 Privacy & Security
 
-Journalizer is built with your privacy in mind:
+Journalizer prioritizes your privacy:
 
-- **No automatic syncing** - You decide when and what to backup
-- **Local-first approach** - Your data stays on your device unless you explicitly choose to backup
-- **No analytics or tracking** - We don't collect any usage data
-- **Open source** - Full transparency in how your data is handled
+- **Local-first approach** - All entries stored locally on your device
+- **You control syncing** - Decide when and what to backup; no automatic syncing
+- **No tracking** - No analytics or user data collection
+- **Open source** - Full transparency in code and data handling
 
 ### 🔒 Password Protection & Encryption
 
@@ -135,9 +138,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 Contributions are welcome! Feel free to open issues or submit pull requests.
 
-## 💡 Why Journalizer?
-
-In an age where everything is cloud-synced automatically, Journalizer takes a different approach. Your journal is personal, and you should have complete control over where it lives and who can access it. That's why we built Journalizer with local storage first, giving you the option to backup only when you choose to, and only the entries you want to backup.
 
 ---
 
