@@ -16,6 +16,7 @@ import { ThemeBackground, themeStyle } from '../styles/theme';
 import { changePassword } from '../services/PasswordService';
 import { useFontSize } from '../context/FontSizeContext';
 import { fontSizePresets, getFontSizeLabel } from '../utils/fontSizeUtils';
+import { calculateFontSize } from '../utils/fontSizeUtils';
 import Icon from '@expo/vector-icons/Ionicons';
 
 export default function SettingsScreen() {
@@ -114,45 +115,57 @@ export default function SettingsScreen() {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Display</Text>
 
-                    {/* Font Size Setting */}
-                    <View style={styles.settingItem}>
-                        <View style={styles.settingItemLeft}>
+                    {/* Font Size Control Section */}
+                    <View style={styles.fontSizeSection}>
+                        {/* Title with Icon */}
+                        <View style={styles.fontSizeTitleContainer}>
                             <Icon 
                                 name="text" 
-                                size={24} 
+                                size={20} 
                                 color={themeStyle.darkPurple2}
-                                style={styles.settingIcon}
+                                style={styles.fontSizeTitleIcon}
                             />
-                            <View>
-                                <Text style={styles.settingItemTitle}>Font Size</Text>
-                                <Text style={styles.settingItemSubtitle}>
-                                    Current: {getFontSizeLabel(fontSizeMultiplier)}
+                            <Text style={styles.fontSizeMainTitle}>Font Size</Text>
+                        </View>
+
+                        {/* Font Size Preview */}
+                        <View style={styles.previewBox}>
+                            <Text style={styles.previewLabel}>Preview:</Text>
+                            <View style={styles.previewContent}>
+                                <Text style={[styles.previewTitle, { fontSize: calculateFontSize(19, fontSizeMultiplier) }]}>
+                                    Journal Entry
+                                </Text>
+                                <Text style={[styles.previewSubtext, { fontSize: calculateFontSize(12, fontSizeMultiplier) }]}>
+                                    This is a sample tag preview
+                                </Text>
+                                <Text style={[styles.previewBody, { fontSize: calculateFontSize(14, fontSizeMultiplier) }]}>
+                                    This is how your journal content will appear with the selected font size.
                                 </Text>
                             </View>
                         </View>
-                    </View>
 
-                    {/* Font Size Options */}
-                    <View style={styles.fontSizeContainer}>
-                        {Object.entries(fontSizePresets).map(([key, multiplier]) => (
-                            <TouchableOpacity
-                                key={key}
-                                style={[
-                                    styles.fontSizeButton,
-                                    fontSizeMultiplier === multiplier && styles.fontSizeButtonActive
-                                ]}
-                                onPress={() => updateFontSize(multiplier)}
-                            >
-                                <Text 
+                        {/* Font Size Options */}
+                        <View style={styles.fontSizeContainer}>
+                            {Object.entries(fontSizePresets).map(([key, multiplier]) => (
+                                <TouchableOpacity
+                                    key={key}
                                     style={[
-                                        styles.fontSizeButtonText,
-                                        fontSizeMultiplier === multiplier && styles.fontSizeButtonTextActive
+                                        styles.fontSizeButton,
+                                        fontSizeMultiplier === multiplier && styles.fontSizeButtonActive
                                     ]}
+                                    onPress={() => updateFontSize(multiplier)}
                                 >
-                                    {getFontSizeLabel(multiplier)}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                                    <Text 
+                                        style={[
+                                            styles.fontSizeButtonText,
+                                            fontSizeMultiplier === multiplier && styles.fontSizeButtonTextActive
+                                        ]}
+                                    >
+                                        {getFontSizeLabel(multiplier)}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
                 </View>
 
@@ -673,12 +686,36 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: themeStyle.white,
     },
+    fontSizeSection: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 12,
+        paddingVertical: 16,
+        paddingHorizontal: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(142, 68, 173, 0.1)',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.0,
+    },
+    fontSizeTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    fontSizeTitleIcon: {
+        marginRight: 10,
+    },
+    fontSizeMainTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: themeStyle.darkPurple2,
+    },
     fontSizeContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         gap: 10,
-        marginTop: 12,
-        marginBottom: 20,
     },
     fontSizeButton: {
         flex: 1,
@@ -702,5 +739,39 @@ const styles = StyleSheet.create({
     },
     fontSizeButtonTextActive: {
         color: themeStyle.white,
+    },
+    previewBox: {
+        flexDirection: 'column',
+        backgroundColor: 'rgba(142, 68, 173, 0.05)',
+        borderRadius: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(142, 68, 173, 0.15)',
+        marginBottom: 14,
+    },
+    previewLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: themeStyle.darkGrey1,
+        marginBottom: 8,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    previewContent: {
+        gap: 6,
+    },
+    previewTitle: {
+        fontFamily: 'Montserrat-Bold',
+        color: themeStyle.darkPurple2,
+    },
+    previewSubtext: {
+        fontFamily: 'Montserrat-SemiBold',
+        color: '#8E44AD',
+    },
+    previewBody: {
+        fontFamily: 'Montserrat-Regular',
+        color: themeStyle.black,
+        lineHeight: 18,
     },
 });
