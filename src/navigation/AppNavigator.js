@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
@@ -16,6 +16,8 @@ import CloudSyncScreen from '../screens/CloudSyncScreen.js';
 import SettingsScreen from '../screens/SettingsScreen.js';
 import TagsScreen from '../screens/TagsScreen.js';
 import JournalEntryScreen from '../screens/JournalEntryScreen.js';
+import PasswordSetupScreen from '../screens/PasswordSetupScreen.js';
+import PasswordPromptScreen from '../screens/PasswordPromptScreen.js';
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -53,32 +55,67 @@ const JournalStack = ({ setIsCreatingEntry }) => {
   );
 };
 
-export const AppNavigator = () => {
+const RootStack = createStackNavigator();
+
+export const AppNavigator = ({ initiallyPasswordVerified = false }) => {
   const [isCreatingEntry, setIsCreatingEntry] = useState(false);
+  const [passwordVerified, setPasswordVerified] = useState(initiallyPasswordVerified);
 
   return (
     <NavigationContainer>
-      <Drawer.Navigator
-        initialRouteName="Journals"
-        drawerContent={(props) => <NavigationDrawer {...props} />}
+      <RootStack.Navigator
         screenOptions={{
-          headerStyle: navigatorStyles.headerStyle,
-          headerTitleStyle: navigatorStyles.headerTitleStyle,
-          headerTintColor: navigatorStyles.headerTintColor,
+          headerShown: false,
         }}
       >
-        <Drawer.Screen name="Journals" options={{headerShown: !isCreatingEntry}}>
-          {() => (
-            <JournalStack
-              setIsCreatingEntry={setIsCreatingEntry}
-              isCreatingEntry={isCreatingEntry}
-            />
-          )}
-        </Drawer.Screen>
-        <Drawer.Screen name="Tags" component={TagsScreen} />
-        <Drawer.Screen name="Cloud Sync" component={CloudSyncScreen} />
-        <Drawer.Screen name="Settings" component={SettingsScreen} />
-      </Drawer.Navigator>
+        {!passwordVerified ? (
+          <RootStack.Screen 
+            name="PasswordPrompt" 
+            options={{
+              animationEnabled: false,
+              cardStyle: { backgroundColor: 'transparent' },
+            }}
+          >
+            {(props) => (
+              <PasswordPromptScreen
+                {...props}
+                onPasswordVerified={() => setPasswordVerified(true)}
+              />
+            )}
+          </RootStack.Screen>
+        ) : (
+          <RootStack.Screen
+            name="MainApp"
+            options={{
+              animationEnabled: false,
+            }}
+          >
+            {() => (
+              <Drawer.Navigator
+                initialRouteName="Journals"
+                drawerContent={(props) => <NavigationDrawer {...props} />}
+                screenOptions={{
+                  headerStyle: navigatorStyles.headerStyle,
+                  headerTitleStyle: navigatorStyles.headerTitleStyle,
+                  headerTintColor: navigatorStyles.headerTintColor,
+                }}
+              >
+                <Drawer.Screen name="Journals" options={{headerShown: !isCreatingEntry}}>
+                  {() => (
+                    <JournalStack
+                      setIsCreatingEntry={setIsCreatingEntry}
+                      isCreatingEntry={isCreatingEntry}
+                    />
+                  )}
+                </Drawer.Screen>
+                <Drawer.Screen name="Tags" component={TagsScreen} />
+                <Drawer.Screen name="Cloud Sync" component={CloudSyncScreen} />
+                <Drawer.Screen name="Settings" component={SettingsScreen} />
+              </Drawer.Navigator>
+            )}
+          </RootStack.Screen>
+        )}
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 };
