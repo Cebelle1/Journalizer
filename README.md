@@ -34,6 +34,8 @@ A privacy-focused journaling app for Android that keeps your thoughts secure and
 - **Dark Theme Support** - Easy on the eyes for night journaling
 - **Smooth Navigation** - Drawer navigation for quick access to all features
 - **Offline First** - Works perfectly without internet connection
+- **Customizable Font Size** - Adjust text size to your preference (Small, Medium, Large) directly from Settings
+- **Live Preview** - See font size changes in real-time before applying
 
 ## 🔐 Privacy & Security
 
@@ -43,6 +45,34 @@ Journalizer is built with your privacy in mind:
 - **Local-first approach** - Your data stays on your device unless you explicitly choose to backup
 - **No analytics or tracking** - We don't collect any usage data
 - **Open source** - Full transparency in how your data is handled
+
+### 🔒 Password Protection & Encryption
+
+#### App Password
+- **Optional Password Protection** - Set up an app password in Settings to protect your journal entries from unauthorized access
+- **Strong Password Requirements** - Passwords must meet security standards:
+  - Minimum 8 characters, maximum 128 characters
+  - At least one uppercase letter
+  - At least one lowercase letter
+  - At least one number
+  - At least one special character
+- **PBKDF2 Hashing** - Passwords are hashed using PBKDF2 with 1,000 iterations for fast mobile processing while maintaining reasonable security against offline brute force attacks
+- **Secure Storage** - Password hashes are stored securely in the device's secure storage (Secure Enclave on iOS, KeyStore on Android)
+- **Salt Generation** - Each password is salted with a cryptographically secure 32-byte random salt
+
+#### Cloud Backup Encryption
+- **End-to-End Encryption** - When you backup entries to Google Drive, they are encrypted before upload
+- **Deterministic Encryption Key** - The encryption key is derived from your app password combined with a unique salt, allowing you to restore backups across multiple devices
+- **AES-256 Encryption** - Backups use AES-256 bit encryption in CBC mode for maximum security
+- **Random IV** - Each backup uses a cryptographically random 128-bit Initialization Vector (IV) to ensure identical data produces different ciphertexts
+- **Cloud-Stored Salt** - The encryption salt is stored on Google Drive, allowing secure restoration on new devices (salt alone cannot decrypt data without your password)
+
+#### Security Best Practices
+- Your password is never transmitted to external servers
+- Only encrypted backups are uploaded to Google Drive
+- The encryption key is derived locally from your password
+- Password changes generate a new salt and re-encrypt future backups
+- All cryptographic operations use industry-standard libraries (CryptoJS)
 
 ## 🚀 Getting Started
 
