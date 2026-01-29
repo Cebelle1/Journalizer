@@ -47,9 +47,6 @@ class GoogleDriveService {
     try {
       const accessToken = await AsyncStorage.getItem(STORAGE_KEY_ACCESS_TOKEN);
       const idToken = await AsyncStorage.getItem(STORAGE_KEY_ID_TOKEN);
-      
-      // Initialize encryption key
-      await this.initializeEncryptionKey();
 
       if (accessToken && idToken) {
         this.accessToken = accessToken;
@@ -134,25 +131,16 @@ class GoogleDriveService {
   // Check if authenticated
   async isAuthenticated() {
     try {
-      // If auth is already in progress, wait for it
-      if (this.authPromise) {
-        console.log('Authentication check already in progress, waiting...');
-        return await this.authPromise;
-      }
-
       // If we already have valid access token, use it
       if (this.accessToken) {
         return true;
       }
 
-      // Create a promise for this auth check
-      this.authPromise = this._performAuthCheck();
-      const result = await this.authPromise;
-      this.authPromise = null;
+      // Perform auth check without creating a shared promise
+      const result = await this._performAuthCheck();
       return result;
     } catch (error) {
       console.error('Error checking authentication:', error);
-      this.authPromise = null;
       return false;
     }
   }
@@ -207,7 +195,6 @@ class GoogleDriveService {
       const driveSalt = await this.getOrCreateEncryptionSalt();
       const key = await this.deriveKeyFromPasswordHash(passwordData.hash, driveSalt);
       this.encryptionKey = key;
-      console.log('Encryption key derived from password hash');
       return key;
     } catch (error) {
       console.error('Error initializing encryption key:', error);
