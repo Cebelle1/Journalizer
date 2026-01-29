@@ -14,21 +14,15 @@ export const tagStyles = StyleSheet.create({
     flexWrap: 'wrap',
     },
   tagBorder: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     margin: 3,
-    backgroundColor: themeStyle.lightGrey1,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 3,
+    borderRadius: 16,
   },
   tagText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    paddingVertical: 1,
-    paddingHorizontal: 1,
-    color: themeStyle.black,
+    fontSize: 12,
+    fontFamily: 'Montserrat-SemiBold',
+    fontWeight: '700',
   },
   activeTag: {
     backgroundColor: themeStyle.darkGrey1,
@@ -76,19 +70,19 @@ export const searchStyles = StyleSheet.create({
 
 export const tagStylesJournalScreen = StyleSheet.create({
   tagText: {
-    fontSize: 13,
-    color: themeStyle.black,
+    fontSize: 12,
+    fontWeight: '700',
   },
   tagIcon:{
     color: themeStyle.black,
     size: 16,
   },
   tagBorder: {
-    paddingHorizontal: 5,
-    margin: 1,
-    backgroundColor: themeStyle.lightGrey1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    margin: 2,
     marginBottom: 5,
-    marginRight: 3,
+    borderRadius: 16,
   },
 });
 

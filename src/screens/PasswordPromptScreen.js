@@ -189,17 +189,6 @@ export default function PasswordPromptScreen({ navigation, onPasswordVerified })
                         </View>
                     )}
 
-                    {/* Security Info */}
-                    <View style={styles.infoCard}>
-                        <Icon 
-                            name="shield-checkmark" 
-                            size={20} 
-                            color={themeStyle.darkPurple2}
-                        />
-                        <Text style={styles.infoText}>
-                            Your password is protected with PBKDF2 encryption
-                        </Text>
-                    </View>
 
                     {/* Verify Button */}
                     <TouchableOpacity
@@ -223,6 +212,18 @@ export default function PasswordPromptScreen({ navigation, onPasswordVerified })
                             </>
                         )}
                     </TouchableOpacity>
+
+                     {/* Security Info */}
+                    <View style={styles.infoCard}>
+                        <Icon 
+                            name="shield-checkmark" 
+                            size={20} 
+                            color={themeStyle.darkPurple2}
+                        />
+                        <Text style={styles.infoText}>
+                            Your password is protected with PBKDF2 encryption
+                        </Text>
+                    </View>
 
                     {/* Forget Password Note */}
                     <View style={styles.noteContainer}>
@@ -346,7 +347,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(142, 68, 173, 0.05)',
         borderRadius: 12,
         padding: 14,
-        marginBottom: 24,
+        marginTop: 24,
+        marginBottom: 14,
         gap: 12,
         borderWidth: 1,
         borderColor: 'rgba(142, 68, 173, 0.1)',

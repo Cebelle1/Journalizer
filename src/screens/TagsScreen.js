@@ -142,7 +142,7 @@ export default function TagsScreen() {
       
       // Remove from UI
       setTags(prevTags => prevTags.filter(tag => tag.name !== tagName));
-      Alert.alert('Success', `Tag "${tagName}" has been deleted`);
+
     } catch (error) {
       console.error('Error deleting tag:', error);
       Alert.alert('Error', `Failed to delete tag "${tagName}"`);
@@ -170,7 +170,6 @@ export default function TagsScreen() {
       setNewTagName('');
       setNewTagColor('#8E44AD');
       setShowAddModal(false);
-      Alert.alert('Success', `Tag "${newTagName}" has been created`);
     } catch (error) {
       console.error('Error creating tag:', error);
       Alert.alert('Error', 'Failed to create tag');
@@ -519,7 +518,7 @@ export default function TagsScreen() {
               {/* Warm Colors */}
               <Text style={styles.colorCategoryTitle}>Warm Colors</Text>
               <View style={styles.colorGridLarge}>
-                {['#821A1A', '#E74C3C', '#FFA07A', '#FF9900', '#FFD93D', '#FFF3D1'].map((color) => {
+                {['#821A1A', '#E74C3C', '#FFA07A', '#ce7b00', '#FF9900', '#FFD93D'].map((color) => {
                   const currentTagColor = tags.find(t => t.name === editingTag)?.color || '#8E44AD';
                   return (
                     <TouchableOpacity

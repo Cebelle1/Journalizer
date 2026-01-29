@@ -235,3 +235,20 @@ export const getPasswordStrengthInfo = (password) => {
   };
 };
 
+// Get stored password hash and salt for encryption key derivation
+// This allows deriving the same encryption key without asking user for password again
+export const getPasswordHashAndSalt = async () => {
+  try {
+    const hash = await SecureStore.getItemAsync(PASSWORD_KEY);
+    const salt = await SecureStore.getItemAsync(PASSWORD_SALT_KEY);
+    
+    if (!hash || !salt) {
+      return null;
+    }
+    
+    return { hash, salt };
+  } catch (error) {
+    console.error('Error retrieving password hash:', error);
+    return null;
+  }
+};

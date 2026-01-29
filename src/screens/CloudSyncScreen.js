@@ -5,9 +5,9 @@ import {
     StyleSheet, 
     ScrollView, 
     TouchableOpacity, 
-    Alert,
     ActivityIndicator,
-    RefreshControl
+    RefreshControl,
+    Alert
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -15,6 +15,7 @@ import MaterialIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { ThemeBackground, themeStyle } from '../styles/theme';
 import { exportAllData, exportSingleEntry, importAllData } from '../database/journalDB';
 import GoogleDriveService from '../services/GoogleDriveService';
+import { isPasswordInitialized } from '../services/PasswordService';
 import { format } from 'date-fns';
 
 export default function CloudSyncScreen() {
@@ -62,15 +63,13 @@ export default function CloudSyncScreen() {
             if (success) {
                 console.log('Sign in successful');
                 setIsAuthenticated(true);
-                Alert.alert('Success', 'Successfully signed in to Google Drive');
                 await loadBackupFiles();
             } else {
                 console.log('Sign in returned false');
-                Alert.alert('Error', 'Sign in was cancelled or failed.');
             }
         } catch (error) {
             console.error('Sign in error:', error);
-            Alert.alert('Error', 'An error occurred during sign in: ' + error.message);
+            Alert.alert('✕ Sign In Failed', error.message || 'An error occurred during sign in. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -91,15 +90,14 @@ export default function CloudSyncScreen() {
                             await GoogleDriveService.signOut();
                             setIsAuthenticated(false);
                             setBackupFiles([]);
-                            Alert.alert('Success', 'Successfully signed out');
                         } catch (error) {
                             console.error('Sign out error:', error);
-                            Alert.alert('Error', 'Failed to sign out');
+                            Alert.alert('✕ Sign Out Failed', error.message || 'Could not sign out. Please try again.');
                         } finally {
                             setIsLoading(false);
                         }
-                    }
-                }
+                    },
+                },
             ]
         );
     };
@@ -111,18 +109,36 @@ export default function CloudSyncScreen() {
             setSelectedBackupIds((prev) => prev.filter((id) => files.some((file) => file.id === id)));
         } catch (error) {
             console.error('Error loading backup files:', error);
-            Alert.alert('Error', 'Failed to load backup files: ' + error.message);
+            // Silent fail - UI will show empty state
         }
     };
 
     const handleBackup = async () => {
         setIsLoading(true);
         try {
+            // Check if password is set
+            const hasPassword = await isPasswordInitialized();
+            if (!hasPassword) {
+                setIsLoading(false);
+                Alert.alert(
+                    '🔐 Password Required',
+                    'Set up an app password to encrypt your backups. This ensures your data is secure on Google Drive.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Set Password', onPress: () => navigation.navigate('Settings') },
+                    ]
+                );
+                return;
+            }
+
+            // Initialize encryption key from stored password hash
+            await GoogleDriveService.initializeEncryptionKey();
+
             // Export all data from database
             const allData = await exportAllData();
             
             if (!allData.entries || allData.entries.length === 0) {
-                Alert.alert('No Entries', 'No journal entries to backup');
+                Alert.alert('📝 No Entries', 'Create some journal entries first before backing up.');
                 setIsLoading(false);
                 return;
             }
@@ -139,7 +155,7 @@ export default function CloudSyncScreen() {
             }
 
             if (backupDataList.length === 0) {
-                Alert.alert('Error', 'Failed to prepare entries for backup');
+                Alert.alert('✕ Backup Failed', 'Could not prepare your entries. Please try again.');
                 setIsLoading(false);
                 return;
             }
@@ -147,11 +163,11 @@ export default function CloudSyncScreen() {
             // Backup each entry as individual file
             const fileIds = await GoogleDriveService.backupSelectedEntries(backupDataList);
             
-            Alert.alert('Success', `Backed up ${fileIds.length} journal entries individually`);
+            console.log(`Backed up ${fileIds.length} entries`);
             await loadBackupFiles();
         } catch (error) {
             console.error('Backup error:', error);
-            Alert.alert('Error', 'Failed to create backup: ' + error.message);
+            Alert.alert('✕ Backup Failed', error.message || 'Could not complete backup. Check your connection.');
         } finally {
             setIsLoading(false);
         }
@@ -159,75 +175,114 @@ export default function CloudSyncScreen() {
 
     const handleRestoreAll = async () => {
         if (backupFiles.length === 0) {
-            Alert.alert('No Backups', 'No backups found in Google Drive');
+            Alert.alert('☁ No Backups', 'Create a backup first before you can restore.');
+            return;
+        }
+
+        // Check if password is set
+        const hasPassword = await isPasswordInitialized();
+        if (!hasPassword) {
+            Alert.alert(
+                'Password Required',
+                'You must set up an app password to restore backups.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Set Password', onPress: () => navigation.navigate('Settings') },
+                ]
+            );
             return;
         }
 
         Alert.alert(
             'Restore All Backups',
-            `Restore all ${backupFiles.length} backups?\n\nEach backup will be merged; local-only entries are kept.`,
+            `Restore all ${backupFiles.length} backups?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Restore',
                     style: 'destructive',
-                    onPress: async () => {
-                        setIsLoading(true);
-                        let restoredCount = 0;
-                        try {
-                            for (const file of backupFiles) {
-                                try {
-                                    const backupData = await GoogleDriveService.downloadBackup(file.id);
-                                    await importAllData(backupData);
-                                    restoredCount += 1;
-                                } catch (error) {
-                                    console.error(`Restore failed for ${file.name}:`, error);
-                                }
-                            }
-
-                            Alert.alert('Restore Complete', `Restored ${restoredCount} of ${backupFiles.length} backups`);
-                            await loadBackupFiles();
-                        } catch (error) {
-                            console.error('Restore error:', error);
-                            Alert.alert('Error', 'Failed to restore backups: ' + error.message);
-                        } finally {
-                            setIsLoading(false);
-                        }
-                    }
-                }
+                    onPress: () => restoreAllBackups(),
+                },
             ]
         );
     };
 
+    const restoreAllBackups = async () => {
+        setIsLoading(true);
+        let restoredCount = 0;
+        try {
+            // Initialize encryption key from stored password hash
+            await GoogleDriveService.initializeEncryptionKey();
+
+            for (const file of backupFiles) {
+                try {
+                    const backupData = await GoogleDriveService.downloadBackup(file.id);
+                    await importAllData(backupData);
+                    restoredCount += 1;
+                } catch (error) {
+                    console.error(`Restore failed for ${file.name}:`, error);
+                }
+            }
+
+            Alert.alert('✓ Restore Complete', `Successfully restored ${restoredCount} backups. Your entries have been merged.`);
+            await loadBackupFiles();
+        } catch (error) {
+            console.error('Restore error:', error);
+            Alert.alert('✕ Restore Failed', error.message || 'Could not restore backups. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleRestore = async (fileId, fileName) => {
+        // Check if password is set
+        const hasPassword = await isPasswordInitialized();
+        if (!hasPassword) {
+            Alert.alert(
+                '🔐 Password Required',
+                'Set up an app password to restore this backup. Use the same password from when you created the backup.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Set Password', onPress: () => navigation.navigate('Settings') },
+                ]
+            );
+            return;
+        }
+
         Alert.alert(
             'Restore Backup',
+            `Restore from "${fileName}"?`,
             `Are you sure you want to restore from "${fileName}"?\n\nThis will merge your local entries with the backup. Local entries not in the backup will be kept.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Restore',
                     style: 'destructive',
-                    onPress: async () => {
-                        setIsLoading(true);
-                        try {
-                            // Download file from Google Drive
-                            const backupData = await GoogleDriveService.downloadBackup(fileId);
-                            
-                            // Import into database - pass the entire backup object
-                            await importAllData(backupData);
-                            
-                            Alert.alert('Success', 'Backup restored successfully!');
-                        } catch (error) {
-                            console.error('Restore error:', error);
-                            Alert.alert('Error', 'Failed to restore backup: ' + error.message);
-                        } finally {
-                            setIsLoading(false);
-                        }
-                    }
-                }
+                    onPress: () => restoreSingleBackup(fileId),
+                },
             ]
         );
+    };
+
+    const restoreSingleBackup = async (fileId) => {
+        setIsLoading(true);
+        try {
+            // Initialize encryption key from stored password hash
+            await GoogleDriveService.initializeEncryptionKey();
+
+            // Download file from Google Drive
+            const backupData = await GoogleDriveService.downloadBackup(fileId);
+            
+            // Import into database - pass the entire backup object
+            await importAllData(backupData);
+            
+            console.log('Backup restored successfully');
+        } catch (error) {
+            console.error('Restore error:', error);
+            Alert.alert('✕ Restore Failed', error.message || 'Could not restore this backup. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleDeleteBackup = async (fileId, fileName) => {
@@ -243,16 +298,15 @@ export default function CloudSyncScreen() {
                         setIsLoading(true);
                         try {
                             await GoogleDriveService.deleteBackup(fileId);
-                            Alert.alert('Success', 'Backup deleted successfully');
                             await loadBackupFiles();
                         } catch (error) {
                             console.error('Delete error:', error);
-                            Alert.alert('Error', 'Failed to delete backup: ' + error.message);
+                            Alert.alert('✕ Delete Failed', error.message || 'Could not delete the backup. Please try again.');
                         } finally {
                             setIsLoading(false);
                         }
-                    }
-                }
+                    },
+                },
             ]
         );
     };
@@ -287,31 +341,32 @@ export default function CloudSyncScreen() {
                 {
                     text: 'Delete',
                     style: 'destructive',
-                    onPress: async () => {
-                        setIsLoading(true);
-                        let deletedCount = 0;
-                        try {
-                            for (const fileId of selectedBackupIds) {
-                                try {
-                                    await GoogleDriveService.deleteBackup(fileId);
-                                    deletedCount += 1;
-                                } catch (deleteError) {
-                                    console.error('Failed to delete backup:', deleteError);
-                                }
-                            }
-                            setSelectedBackupIds([]);
-                            Alert.alert('Success', `Deleted ${deletedCount} backup(s)`);
-                            await loadBackupFiles();
-                        } catch (error) {
-                            console.error('Bulk delete error:', error);
-                            Alert.alert('Error', 'Failed to delete selected backups: ' + error.message);
-                        } finally {
-                            setIsLoading(false);
-                        }
-                    }
-                }
+                    onPress: () => deleteSelectedBackups(),
+                },
             ]
         );
+    };
+
+    const deleteSelectedBackups = async () => {
+        setIsLoading(true);
+        let deletedCount = 0;
+        try {
+            for (const fileId of selectedBackupIds) {
+                try {
+                    await GoogleDriveService.deleteBackup(fileId);
+                    deletedCount += 1;
+                } catch (deleteError) {
+                    console.error('Failed to delete backup:', deleteError);
+                }
+            }
+            setSelectedBackupIds([]);
+            await loadBackupFiles();
+        } catch (error) {
+            console.error('Bulk delete error:', error);
+            Alert.alert('✕ Delete Failed', error.message || 'Could not delete some backups. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const onRefresh = async () => {
