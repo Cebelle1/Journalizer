@@ -458,6 +458,126 @@ export const searchJournalEntries = async ({startDate, endDate, title, tags = []
   }
 };
 
+// Read journal entries with pagination
+export const readJournalEntriesPaginated = async (limit = 30, offset = 0) => {
+  try {
+    const db = await getDBInstance();
+    const entries = await db.getAllAsync(`
+      SELECT 
+        je.id,
+        je.date,
+        je.title,
+        je.body,
+        je.createdAt
+      FROM journal_entries je
+      ORDER BY je.date DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+    
+    // Fetch tags for each entry
+    const entriesWithTags = [];
+    for (const entry of entries) {
+      const tagResults = await db.getAllAsync(`
+        SELECT DISTINCT t.id, t.name, t.color
+        FROM entry_tags et
+        LEFT JOIN tags t ON et.tagId = t.id
+        WHERE et.entryId = ?
+        ORDER BY t.name ASC
+      `, [entry.id]);
+      
+      const tags = tagResults ? tagResults.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        color: formatColor(tag.color)
+      })) : [];
+      
+      entriesWithTags.push({
+        ...entry,
+        tags
+      });
+    }
+    
+    return entriesWithTags;
+  } catch (error) {
+    console.error('Error reading paginated journal entries:', error);
+    return [];
+  }
+};
+
+// Search journal entries with pagination
+export const searchJournalEntriesPaginated = async ({startDate, endDate, title, tags = [], limit = 30, offset = 0}) => {
+  try {
+    const db = await getDBInstance();
+    
+    let query = `
+      SELECT DISTINCT je.id, je.date, je.title, je.body, je.createdAt
+      FROM journal_entries je
+      LEFT JOIN entry_tags et ON je.id = et.entryId
+      LEFT JOIN tags t ON et.tagId = t.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    
+    if (startDate) {
+      query += ` AND je.date >= ?`;
+      params.push(startDate);
+    }
+    
+    if (endDate) {
+      query += ` AND je.date <= ?`;
+      params.push(endDate);
+    }
+    
+    if (title && title.trim()) {
+      query += ` AND je.title LIKE ?`;
+      params.push(`%${title}%`);
+    }
+    
+    if (tags && tags.length > 0) {
+      const tagNames = tags.filter(t => typeof t === 'string');
+      if (tagNames.length > 0) {
+        const tagPlaceholders = tagNames.map(() => '?').join(',');
+        query += ` AND t.name IN (${tagPlaceholders})`;
+        params.push(...tagNames);
+      }
+    }
+    
+    query += ` GROUP BY je.id ORDER BY je.date DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+    
+    const results = await db.getAllAsync(query, params.length > 0 ? params : []);
+    
+    // Fetch tags for each result
+    const resultsWithTags = [];
+    for (const entry of results) {
+      const tagResults = await db.getAllAsync(`
+        SELECT DISTINCT t.id, t.name, t.color
+        FROM entry_tags et
+        LEFT JOIN tags t ON et.tagId = t.id
+        WHERE et.entryId = ?
+        ORDER BY t.name ASC
+      `, [entry.id]);
+      
+      const entryTags = tagResults ? tagResults.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        color: formatColor(tag.color)
+      })) : [];
+      
+      resultsWithTags.push({
+        ...entry,
+        tags: entryTags
+      });
+    }
+    
+    return resultsWithTags;
+  } catch (error) {
+    console.error('Error searching paginated journal entries:', error);
+    return [];
+  }
+};
+
 // Read a single journal entry with its tags
 export const readJournalEntry = async (id) => {
   try {

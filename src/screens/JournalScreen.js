@@ -23,12 +23,14 @@ import TagList from '../components/TagList';
 import SearchModal from '../components/SearchModal';
 
 // Database
-import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries, exportSingleEntry } from '../database/journalDB';
-import GoogleDriveService from '../services/googleDriveService';
+import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries, readJournalEntriesPaginated, searchJournalEntriesPaginated } from '../database/journalDB';
 
 export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -38,8 +40,10 @@ export default function JournalScreen({ navigation }) {
   const [filters, setFilters] = useState({
     dateRange: { startDate: null, endDate: null},
     tags: [],
-    searchQuery: '',
+    searchTitle: '',
   });
+
+  const PAGE_SIZE = 30;
 
   const onSearch = useCallback(() => {
     setSearchModalVisible(true);
@@ -61,81 +65,98 @@ export default function JournalScreen({ navigation }) {
   const dynamicTagStyles = useMemo(() => createDynamicTagStylesJournalScreen(fontSizeMultiplier), [fontSizeMultiplier]);
 
   // Memoize flatListData to prevent recreation on every render
-  const flatListData = useMemo(() => 
-    journalEntries.flatMap((yearGroup) => [
-      { year: yearGroup.year, id: yearGroup.year },
-      ...yearGroup.entries,
-    ]),
-    [journalEntries]
-  );
+  const flatListData = useMemo(() => {
+  return journalEntries.flatMap((yearGroup) => [
+    { type: 'year', year: yearGroup.year, id: `year-${yearGroup.year}` },
+    ...yearGroup.entries.map(entry => ({
+      ...entry,
+      type: 'entry',
+      id: entry.id, // real id only
+    })),
+  ]);
+}, [journalEntries]);
 
   // Memoize renderItem function to prevent recreation on every render
   const memoizedRenderItem = useCallback(({ item }) => {
-    if (item.year) {
-      return (
-        <Text style={dynamicStyles.yearDivider}>{item.year}</Text>
-      );
-    }
-
-    const entry = item;
-    const isSelected = selectedEntries.has(entry.id);
-
+  // 🔹 Year divider
+  if (item.type === 'year') {
     return (
-      <TouchableOpacity
-        key={entry.id}
-        style={[dynamicStyles.entry, isSelected && { backgroundColor: themeStyle.lightPurple1 }]} 
-        onLongPress={() => {
-          if (!isSelectionMode) {
-            setIsSelectionMode(true);
-            toggleSelection(entry.id);
-          }
-        }}
-        onPress={() => {
-          if (isSelectionMode) {
-            toggleSelection(entry.id);
-          } else {
-            navigation.navigate('Journal Entry', { id: entry.id });
-          }
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-          {isSelectionMode && (
-            <MaterialIcon
-              name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
-              size={24}
-              color={themeStyle.darkPurple2}
-              style={{ marginRight: 10, marginTop: 5 }}
-            />
-          )}
-          <View style={{ flex: 1 }}>
-            <View>
-                {/* Title and Date */}
-                <View style={dynamicStyles.entryTextContainer}>
-                  <Text style={dynamicStyles.entryTextTitle} numberOfLines={1}>
-                    {entry.title}
-                  </Text>
-                  <Text style={dynamicStyles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
-                </View>
-
-                {/* Tags */}
-                <View style={dynamicStyles.entryTextContainer}>
-                  <TagList
-                    tags={entry.tags || []}
-                    style={dynamicTagStyles} />
-                </View>
-
-                <View style={entryStyles.divider} />
-
-                {/* Body */}
-                <Text style={dynamicStyles.entryText} numberOfLines={6}>
-                  {entry.body}
-                </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
+      <Text style={dynamicStyles.yearDivider}>
+        {item.year}
+      </Text>
     );
-  }, [dynamicStyles, dynamicTagStyles, selectedEntries, isSelectionMode, navigation]);
+  }
+
+  // 🔹 Journal entry
+  const entry = item; // already a real entry object
+  const isSelected = selectedEntries.has(entry.id);
+
+  return (
+    <TouchableOpacity
+      style={[
+        dynamicStyles.entry,
+        isSelected && { backgroundColor: themeStyle.lightPurple1 },
+      ]}
+      onLongPress={() => {
+        if (!isSelectionMode) {
+          setIsSelectionMode(true);
+          toggleSelection(entry.id);
+        }
+      }}
+      onPress={() => {
+        if (isSelectionMode) {
+          toggleSelection(entry.id);
+        } else {
+          navigation.navigate('Journal Entry', { id: entry.id });
+        }
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        {isSelectionMode && (
+          <MaterialIcon
+            name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
+            size={24}
+            color={themeStyle.darkPurple2}
+            style={{ marginRight: 10, marginTop: 5 }}
+          />
+        )}
+
+        <View style={{ flex: 1 }}>
+          {/* Title + Date */}
+          <View style={dynamicStyles.entryTextContainer}>
+            <Text style={dynamicStyles.entryTextTitle} numberOfLines={1}>
+              {entry.title}
+            </Text>
+            <Text style={dynamicStyles.entryTextDate}>
+              {formatYearMonthDay(entry.date)}
+            </Text>
+          </View>
+
+          {/* Tags */}
+          <View style={dynamicStyles.entryTextContainer}>
+            <TagList
+              tags={entry.tags || []}
+              style={dynamicTagStyles}
+            />
+          </View>
+
+          <View style={entryStyles.divider} />
+
+          {/* Body */}
+          <Text style={dynamicStyles.entryText} numberOfLines={6}>
+            {entry.body}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}, [
+  dynamicStyles,
+  dynamicTagStyles,
+  selectedEntries,
+  isSelectionMode,
+  navigation,
+]);
 
   const clearFilters = useCallback(() => {
     setFilters({
@@ -161,12 +182,12 @@ export default function JournalScreen({ navigation }) {
     if (hasActiveFilters) {
       if (filters.tags.length > 0) {
         filterComponents.push(
-          <View key="tags" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+          <View key="tags-label" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
             <Text style={{ color: '#999', fontSize: 12 }}>tags:</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap', flexShrink: 1 }}>
               {filters.tags.slice(0, 3).map((tag, idx) => (
                 <View 
-                  key={idx}
+                  key={`tag-${tag}-${idx}`}
                   style={{ 
                     backgroundColor: '#8E44AD20',
                     paddingHorizontal: 6,
@@ -320,9 +341,9 @@ export default function JournalScreen({ navigation }) {
               style={{ flex: 1 }}
             >
               {filterComponents.map((component, index) => (
-                <React.Fragment key={index}>
+                <React.Fragment key={`filterComponent-${index}`}>
                   {component}
-                  {index < filterComponents.length - 1 && <Text style={{ color: '#999', fontSize: 12 }}>•</Text>}
+                  {index < filterComponents.length - 1 && <Text style={{ color: '#999', fontSize: 12 }} key={`dot-${index}`}>•</Text>}
                 </React.Fragment>
               ))}
             </ScrollView>
@@ -352,11 +373,20 @@ export default function JournalScreen({ navigation }) {
     });
   }, [navigation, hasActiveFilters, clearFilters, searchInput, filters, isSelectionMode, selectedEntries, totalEntriesCount, isDeleting, allEntryIds]);
 
-  // Function to load and group entries
-  const loadEntries = useCallback(async () => {
-    setLoading(true);
+  // Function to load and group entries with pagination
+  const loadEntries = useCallback(async (reset = false) => {
+    if (reset) {
+      setLoading(true);
+      setCurrentPage(0);
+      setHasMore(true);
+    }
+    
     try {
-      const entries = await readAllJournalEntries();
+      const page = reset ? 0 : currentPage;
+      const entries = await readJournalEntriesPaginated(PAGE_SIZE, page * PAGE_SIZE);
+      
+      // Check if there are more entries to load
+      setHasMore(entries.length === PAGE_SIZE);
       
       // Group entries by year
       const groupedEntries = entries.reduce((acc, entry) => {
@@ -374,26 +404,63 @@ export default function JournalScreen({ navigation }) {
         entries: groupedEntries[year],
       }));
 
-      setJournalEntries(groupedEntriesArray);
+      if (reset) {
+        setJournalEntries(groupedEntriesArray);
+      } else {
+        // Merge with existing entries for pagination, avoiding duplicates
+        setJournalEntries(prev => {
+          const merged = [...prev];
+          groupedEntriesArray.forEach(newYearGroup => {
+            const existingIndex = merged.findIndex(g => g.year === newYearGroup.year);
+            if (existingIndex >= 0) {
+              // Filter out entries with duplicate IDs
+              const existingIds = new Set(merged[existingIndex].entries.map(e => e.id));
+              const uniqueNewEntries = newYearGroup.entries.filter(e => !existingIds.has(e.id));
+              merged[existingIndex].entries = [...merged[existingIndex].entries, ...uniqueNewEntries];
+            } else {
+              merged.push(newYearGroup);
+            }
+          });
+          return merged.sort((a, b) => b.year - a.year);
+        });
+      }
+      
+      if (!reset) {
+        setCurrentPage(page + 1);
+      }
     } catch (error) {
       console.error('Failed to load journal entries:', error);
     } finally {
-      setLoading(false);
+      if (reset) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [currentPage]);
+
+  // Load more entries when scrolling
+  const loadMoreEntries = useCallback(async () => {
+    if (loadingMore || !hasMore || loading) return;
+    
+    setLoadingMore(true);
+    try {
+      await loadEntries(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadEntries, loadingMore, hasMore, loading]);
 
   // Load all journal entries from the database on mount
   useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
+    loadEntries(true);
+  }, []);
 
   // Refresh entries when screen comes into focus (after deleting tags or entries)
   useFocusEffect(
     useCallback(() => {
       // Close search modal when coming back from another screen
       setSearchModalVisible(false);
-      loadEntries();
-    }, [loadEntries])
+      loadEntries(true);
+    }, [])
   );
 
   const onApplyFilters = (appliedFilters) => {
@@ -404,10 +471,9 @@ export default function JournalScreen({ navigation }) {
   // When filters change, perform the search
   useEffect(() => {
     const performSearch = async () => {
-      // If no filters are set, load all entries
+      // If no filters are set, load all entries with pagination
       if (!filters.dateRange.startDate && !filters.dateRange.endDate && filters.tags.length === 0 && !filters.searchTitle) {
-        const entries = await readAllJournalEntries();
-        groupAndSetEntries(entries);
+        loadEntries(true);
         return;
       }
 
@@ -421,7 +487,9 @@ export default function JournalScreen({ navigation }) {
 
       try {
         setLoading(true);
-        const results = await searchJournalEntries(searchParams);
+        setCurrentPage(0);
+        setHasMore(false); // Disable pagination for search results
+        const results = await searchJournalEntriesPaginated({ ...searchParams, limit: 1000, offset: 0 });
         groupAndSetEntries(results);
       } catch (error) {
         console.error('Search failed:', error);
@@ -530,7 +598,7 @@ export default function JournalScreen({ navigation }) {
               setIsSelectionMode(false);
               
               // Reload entries
-              loadEntries();
+              loadEntries(true);
             } catch (error) {
               console.error('Delete error:', error);
               Alert.alert('Error', 'Failed to delete entries: ' + error.message);
@@ -544,74 +612,6 @@ export default function JournalScreen({ navigation }) {
     );
   };
 
-  const renderItem = ({ item }, dynamicStyles) => {
-    if (item.year) {
-      {/* Year Divider */}
-      return (
-        <Text style={dynamicStyles.yearDivider}>{item.year}</Text>
-      );
-    }
-
-    const entry = item; // Individual journal entry
-    const isSelected = selectedEntries.has(entry.id);
-
-    {/* Delete Journal Entry long press logic or Selection mode*/}
-    return (
-      <TouchableOpacity
-        key={entry.id}
-        style={[dynamicStyles.entry, isSelected && { backgroundColor: themeStyle.lightPurple1 }]} 
-        onLongPress={() => {
-          if (!isSelectionMode) {
-            setIsSelectionMode(true);
-            toggleSelection(entry.id);
-          }
-        }}
-        onPress={() => {
-          if (isSelectionMode) {
-            toggleSelection(entry.id);
-          } else {
-            navigation.navigate('Journal Entry', { id: entry.id });
-          }
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-          {isSelectionMode && (
-            <MaterialIcon
-              name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
-              size={24}
-              color={themeStyle.darkPurple2}
-              style={{ marginRight: 10, marginTop: 5 }}
-            />
-          )}
-          <View style={{ flex: 1 }}>
-            <View>
-                {/* Title and Date */}
-                <View style={dynamicStyles.entryTextContainer}>
-                  <Text style={dynamicStyles.entryTextTitle} numberOfLines={1}>
-                    {entry.title}
-                  </Text>
-                  <Text style={dynamicStyles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
-                </View>
-
-                {/* Tags */}
-                <View style={dynamicStyles.entryTextContainer}>
-                  <TagList
-                    tags={entry.tags || []}
-                    style={dynamicTagStyles} />
-                </View>
-
-                <View style={entryStyles.divider} />
-
-                {/* Body */ }
-                <Text style={dynamicStyles.entryText} numberOfLines={6}>
-                  {entry.body}
-                </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
 
   if (loading) {
     return <ActivityIndicator size="large" color="#0000ff" />;
@@ -640,6 +640,15 @@ export default function JournalScreen({ navigation }) {
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           initialNumToRender={10}
+          onEndReached={loadMoreEntries}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={{ paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color={themeStyle.darkPurple2} />
+              </View>
+            ) : null
+          }
         />
       )}
 
