@@ -8,6 +8,7 @@ import { FontSizeProvider } from './src/context/FontSizeContext.js';
 export default function App() {
   const fontsLoaded = useLoadFont();
   const [passwordState, setPasswordState] = useState(null); // null = loading, 'setup' = needs setup, 'initialized' = setup done
+  const [justCompletedSetup, setJustCompletedSetup] = useState(false); // Track if user just set up password
 
   useEffect(() => {
     checkPasswordStatus();
@@ -33,16 +34,20 @@ export default function App() {
     return (
       <FontSizeProvider>
         <PasswordSetupScreen 
-          onPasswordSet={() => setPasswordState('initialized')}
+          onPasswordSet={() => {
+            setPasswordState('initialized');
+            setJustCompletedSetup(true); // Mark that user just completed setup
+          }}
         />
       </FontSizeProvider>
     );
   }
 
-  // Password is initialized, show main app with prompt
+  // Password is initialized, show main app
+  // If user just completed setup, they're already verified (no need to prompt again)
   return (
     <FontSizeProvider>
-      <AppNavigator initiallyPasswordVerified={false} />
+      <AppNavigator initiallyPasswordVerified={justCompletedSetup} />
     </FontSizeProvider>
   );
 }

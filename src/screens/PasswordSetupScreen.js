@@ -92,25 +92,18 @@ export default function PasswordSetupScreen({ navigation, onPasswordSet }) {
         console.log('Validation passed, starting password set');
         setIsLoading(true);
         try {
-            console.log('Calling setPassword...');
             await setPassword(password);
-            console.log('setPassword successful');
-            Alert.alert('Success', 'Password set successfully!', [
-                {
-                    text: 'OK',
-                    onPress: () => {
-                        console.log('Success alert closed, calling onPasswordSet or navigation');
-                        if (onPasswordSet) {
-                            onPasswordSet();
-                        } else {
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'MainApp' }],
-                            });
-                        }
-                    },
-                },
-            ]);
+            console.log('setPassword successful - redirecting immediately');
+            
+            // Redirect immediately without alert
+            if (onPasswordSet) {
+                onPasswordSet();
+            } else {
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'MainApp' }],
+                });
+            }
         } catch (error) {
             console.error('Error in handleSetPassword:', error);
             Alert.alert('Error', error.message || 'Failed to set password');

@@ -11,11 +11,6 @@ const GOOGLE_DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const STORAGE_KEY_ACCESS_TOKEN = '@journalizer_google_access_token';
 const STORAGE_KEY_ID_TOKEN = '@journalizer_google_id_token';
 const STORAGE_KEY_ENCRYPTION_KEY = '@journalizer_encryption_key';
-const STORAGE_KEY_ENCRYPTION_SALT = '@journalizer_encryption_salt';
-
-// Encryption constants
-const PBKDF2_ITERATIONS = 10000; // Higher iterations for encryption key derivation
-const ENCRYPTION_KEY_SIZE = 256 / 32; // 256-bit key = 8 words in CryptoJS
 
 class GoogleDriveService {
   constructor() {
@@ -191,11 +186,9 @@ class GoogleDriveService {
         throw new Error('App password must be set before using cloud backup. Please set up your password in Settings.');
       }
       
-      // Derive encryption key from stored password hash
-      const driveSalt = await this.getOrCreateEncryptionSalt();
-      const key = await this.deriveKeyFromPasswordHash(passwordData.hash, driveSalt);
-      this.encryptionKey = key;
-      return key;
+      // Use password hash directly as encryption key (deterministic, no salt needed)
+      this.encryptionKey = passwordData.hash;
+      return this.encryptionKey;
     } catch (error) {
       console.error('Error initializing encryption key:', error);
       throw error;
@@ -218,91 +211,6 @@ class GoogleDriveService {
         bytes += String.fromCharCode(byte);
       }
       return CryptoJS.enc.Latin1.parse(bytes).toString(CryptoJS.enc.Hex);
-    }
-  }
-
-  // Derive encryption key from password hash using PBKDF2
-  // Uses the stored password hash as input, combined with Drive-specific salt
-  async deriveKeyFromPasswordHash(passwordHash, driveSalt) {
-    return new Promise((resolve, reject) => {
-      try {
-        // Use setTimeout to prevent blocking the main thread
-        setTimeout(() => {
-          try {
-            // Derive encryption key from password hash + drive salt
-            // This ensures the encryption key is different from the password hash
-            // but still deterministic based on user's password
-            const key = CryptoJS.PBKDF2(passwordHash, driveSalt, {
-              keySize: ENCRYPTION_KEY_SIZE,
-              iterations: PBKDF2_ITERATIONS,
-            });
-            resolve(key.toString(CryptoJS.enc.Hex));
-          } catch (innerError) {
-            console.error('Error deriving key from password hash:', innerError);
-            reject(innerError);
-          }
-        }, 0);
-      } catch (error) {
-        console.error('Error in deriveKeyFromPasswordHash:', error);
-        reject(error);
-      }
-    });
-  }
-
-  // Get or create encryption salt (stored in Google Drive for cloud sync)
-  async getOrCreateEncryptionSalt() {
-    try {
-      // First check local storage
-      let salt = await AsyncStorage.getItem(STORAGE_KEY_ENCRYPTION_SALT);
-      
-      if (!salt) {
-        // Try to download from Google Drive
-        const authenticated = await this.isAuthenticated();
-        if (authenticated) {
-          try {
-            salt = await this.downloadEncryptionSalt();
-            if (salt) {
-              // Store locally for next time
-              await AsyncStorage.setItem(STORAGE_KEY_ENCRYPTION_SALT, salt);
-            }
-          } catch (error) {
-            console.log('No salt found in Google Drive, will create new one');
-          }
-        }
-        
-        // If still no salt, generate a new one
-        if (!salt) {
-          salt = await this.generateEncryptionSalt();
-          await AsyncStorage.setItem(STORAGE_KEY_ENCRYPTION_SALT, salt);
-          
-          // Upload to Google Drive if authenticated
-          if (authenticated) {
-            try {
-              await this.uploadEncryptionSalt(salt);
-            } catch (error) {
-              console.error('Error uploading salt to Google Drive:', error);
-            }
-          }
-        }
-      }
-      
-      return salt;
-    } catch (error) {
-      console.error('Error getting encryption salt:', error);
-      throw error;
-    }
-  }
-
-  // Generate a secure random salt
-  async generateEncryptionSalt() {
-    try {
-      const randomBytes = await Crypto.getRandomBytesAsync(32);
-      const wordArray = CryptoJS.lib.WordArray.create(randomBytes);
-      return wordArray.toString(CryptoJS.enc.Hex);
-    } catch (error) {
-      console.warn('Secure random unavailable for salt, using fallback');
-      // Fallback to timestamp + random
-      return Date.now().toString(36) + Math.random().toString(36).substring(2);
     }
   }
 
@@ -723,143 +631,6 @@ class GoogleDriveService {
       return fileIds;
     } catch (error) {
       console.error('Error backing up selected entries:', error);
-      throw error;
-    }
-  }
-
-  // Upload encryption salt to Google Drive
-  async uploadEncryptionSalt(salt) {
-    try {
-      if (!this.accessToken) {
-        throw new Error('Not authenticated');
-      }
-
-      const folderId = await this.getOrCreateBackupFolder();
-      
-      // Check if salt file already exists
-      const existingFiles = await fetch(
-        `${GOOGLE_DRIVE_API}/files?q=name='encryption-salt.txt' and '${folderId}' in parents and trashed=false&spaces=drive`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
-          },
-        }
-      );
-
-      if (!existingFiles.ok) {
-        throw new Error('Failed to check for existing salt file');
-      }
-
-      const existingData = await existingFiles.json();
-      const existingFile = existingData.files?.[0];
-
-      if (existingFile) {
-        // Update existing salt file
-        const updateResponse = await fetch(
-          `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`,
-          {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${this.accessToken}`,
-              'Content-Type': 'text/plain',
-            },
-            body: salt,
-          }
-        );
-
-        if (!updateResponse.ok) {
-          throw new Error('Failed to update salt file');
-        }
-      } else {
-        // Create new salt file
-        const metadata = {
-          name: 'encryption-salt.txt',
-          mimeType: 'text/plain',
-          parents: [folderId],
-        };
-
-        const formData = new FormData();
-        formData.append('metadata', JSON.stringify(metadata));
-        formData.append('file', new Blob([salt], { type: 'text/plain' }));
-
-        const createResponse = await fetch(
-          'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${this.accessToken}`,
-            },
-            body: formData,
-          }
-        );
-
-        if (!createResponse.ok) {
-          throw new Error('Failed to create salt file');
-        }
-      }
-
-      console.log('Encryption salt uploaded to Google Drive');
-    } catch (error) {
-      console.error('Error uploading encryption salt:', error);
-      throw error;
-    }
-  }
-
-  // Download encryption salt from Google Drive
-  async downloadEncryptionSalt() {
-    try {
-      if (!this.accessToken) {
-        throw new Error('Not authenticated');
-      }
-
-      const folderId = await this.getOrCreateBackupFolder();
-      
-      // Search for salt file
-      const response = await fetch(
-        `${GOOGLE_DRIVE_API}/files?q=name='encryption-salt.txt' and '${folderId}' in parents and trashed=false&spaces=drive`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
-          },
-        }
-      );
-
-      if (response.status === 401) {
-        const refreshed = await this.refreshAccessToken();
-        if (refreshed) {
-          return await this.downloadEncryptionSalt();
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to search for salt file');
-      }
-
-      const data = await response.json();
-      const saltFile = data.files?.[0];
-
-      if (!saltFile) {
-        return null; // No salt file found
-      }
-
-      // Download the salt content
-      const downloadResponse = await fetch(
-        `${GOOGLE_DRIVE_API}/files/${saltFile.id}?alt=media`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
-          },
-        }
-      );
-
-      if (!downloadResponse.ok) {
-        throw new Error('Failed to download salt file');
-      }
-
-      const salt = await downloadResponse.text();
-      return salt;
-    } catch (error) {
-      console.error('Error downloading encryption salt:', error);
       throw error;
     }
   }

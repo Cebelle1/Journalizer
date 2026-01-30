@@ -59,23 +59,22 @@ Journalizer prioritizes your privacy:
   - At least one lowercase letter
   - At least one number
   - At least one special character
-- **PBKDF2 Hashing** - Passwords are hashed using PBKDF2 with 1,000 iterations for fast mobile processing while maintaining reasonable security against offline brute force attacks
+- **PBKDF2 Hashing** - Passwords are hashed using PBKDF2 with 1,000 iterations and a fixed salt for deterministic hash generation
 - **Secure Storage** - Password hashes are stored securely in the device's secure storage (Secure Enclave on iOS, KeyStore on Android)
-- **Salt Generation** - Each password is salted with a cryptographically secure 32-byte random salt
+- **Deterministic Hashing** - Same password always produces the same hash, enabling seamless app reinstallation and cloud restore
 
 #### Cloud Backup Encryption
 - **End-to-End Encryption** - When you backup entries to Google Drive, they are encrypted before upload
-- **Deterministic Encryption Key** - The encryption key is derived from your app password combined with a unique salt, allowing you to restore backups across multiple devices
+- **Deterministic Encryption Key** - The encryption key is derived directly from your app password hash, allowing you to restore backups after app reinstall or across devices with the same password
 - **AES-256 Encryption** - Backups use AES-256 bit encryption in CBC mode for maximum security
 - **Random IV** - Each backup uses a cryptographically random 128-bit Initialization Vector (IV) to ensure identical data produces different ciphertexts
-- **Cloud-Stored Salt** - The encryption salt is stored on Google Drive, allowing secure restoration on new devices (salt alone cannot decrypt data without your password)
 
 #### Security Best Practices
 - Your password is never transmitted to external servers
 - Only encrypted backups are uploaded to Google Drive
-- The encryption key is derived locally from your password
-- Password changes generate a new salt and re-encrypt future backups
+- The encryption key is your password hash (stored locally in secure storage)
 - All cryptographic operations use industry-standard libraries (CryptoJS)
+- After reinstalling the app, use the same password to restore your encrypted backups
 
 ## 🚀 Getting Started
 

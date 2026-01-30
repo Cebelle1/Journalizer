@@ -1,36 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
 import CryptoJS from 'crypto-js';
-import * as Crypto from 'expo-crypto';
 
 const PASSWORD_KEY = 'journalizer_password_hash';
-const PASSWORD_SALT_KEY = 'journalizer_password_salt';
 const PASSWORD_INITIALIZED_KEY = 'journalizer_password_initialized';
 
 // Security constants
 const PBKDF2_ITERATIONS = 1000; // 1k iterations - fast for mobile while still providing reasonable protection against offline brute force
 const MIN_PASSWORD_LENGTH = 8; // NIST recommends minimum 8 characters
-const SALT_LENGTH = 32; // 32 bytes of salt
 
-// Generate a secure salt for password hashing using expo-crypto
-const generateSalt = async () => {
-  try {
-    // Use expo-crypto to generate random bytes
-    const randomBytes = await Crypto.getRandomBytes(SALT_LENGTH);
-    // Convert to hex string
-    return randomBytes.map(byte => {
-      const hex = byte.toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    }).join('');
-  } catch (error) {
-    console.error('Error generating salt:', error);
-    // Fallback: generate a simple random string if crypto fails
-    return Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15);
-  }
-};
-
-// Hash password with salt using PBKDF2
-const hashPassword = async (password, salt) => {
+// Hash password using PBKDF2 without salt for deterministic key generation
+const hashPassword = async (password) => {
   // Use PBKDF2 with iterations (lower for mobile due to computational constraints)
   // Wrap in Promise to yield to event loop and prevent main thread blocking
   console.log('hashPassword: Starting PBKDF2 with', PBKDF2_ITERATIONS, 'iterations');
@@ -39,7 +18,8 @@ const hashPassword = async (password, salt) => {
       // Use setTimeout to yield to the event loop before starting the expensive computation
       setTimeout(() => {
         try {
-          const hash = CryptoJS.PBKDF2(password, salt, {
+          // Use a fixed string as salt for PBKDF2 (required parameter)
+          const hash = CryptoJS.PBKDF2(password, 'journalizer-fixed-salt', {
             keySize: 64, // 512-bit hash
             iterations: PBKDF2_ITERATIONS,
           });
@@ -107,18 +87,12 @@ export const setPassword = async (password) => {
       throw new Error(validation.errors[0]);
     }
 
-    console.log('Password validation passed, generating salt...');
-    const salt = await generateSalt();
-    console.log('Salt generated, hashing password...');
+    console.log('Password validation passed, hashing password...');
     
-    const hashedPassword = await hashPassword(password, salt);
+    const hashedPassword = await hashPassword(password);
     console.log('Password hashed successfully, storing in secure storage...');
 
     // Store in secure storage
-    console.log('Storing salt...');
-    await SecureStore.setItemAsync(PASSWORD_SALT_KEY, salt);
-    console.log('Salt stored, storing hashed password...');
-    
     await SecureStore.setItemAsync(PASSWORD_KEY, hashedPassword);
     console.log('Password hash stored, marking as initialized...');
     
@@ -134,14 +108,13 @@ export const setPassword = async (password) => {
 // Verify password attempt
 export const verifyPassword = async (passwordAttempt) => {
   try {
-    const salt = await SecureStore.getItemAsync(PASSWORD_SALT_KEY);
     const storedHash = await SecureStore.getItemAsync(PASSWORD_KEY);
 
-    if (!salt || !storedHash) {
+    if (!storedHash) {
       throw new Error('Password not found. Please set up password first.');
     }
 
-    const attemptHash = await hashPassword(passwordAttempt, salt);
+    const attemptHash = await hashPassword(passwordAttempt);
 
     // Use constant-time comparison to prevent timing attacks
     // CryptoJS comparison is timing-safe
@@ -187,10 +160,8 @@ export const changePassword = async (currentPassword, newPassword) => {
     }
 
     // Set new password
-    const salt = await generateSalt();
-    const hashedPassword = await hashPassword(newPassword, salt);
+    const hashedPassword = await hashPassword(newPassword);
 
-    await SecureStore.setItemAsync(PASSWORD_SALT_KEY, salt);
     await SecureStore.setItemAsync(PASSWORD_KEY, hashedPassword);
 
     return true;
@@ -204,7 +175,6 @@ export const changePassword = async (currentPassword, newPassword) => {
 export const clearPassword = async () => {
   try {
     await SecureStore.deleteItemAsync(PASSWORD_KEY);
-    await SecureStore.deleteItemAsync(PASSWORD_SALT_KEY);
     await SecureStore.deleteItemAsync(PASSWORD_INITIALIZED_KEY);
     return true;
   } catch (error) {
@@ -235,18 +205,17 @@ export const getPasswordStrengthInfo = (password) => {
   };
 };
 
-// Get stored password hash and salt for encryption key derivation
+// Get stored password hash for encryption key derivation
 // This allows deriving the same encryption key without asking user for password again
 export const getPasswordHashAndSalt = async () => {
   try {
     const hash = await SecureStore.getItemAsync(PASSWORD_KEY);
-    const salt = await SecureStore.getItemAsync(PASSWORD_SALT_KEY);
     
-    if (!hash || !salt) {
+    if (!hash) {
       return null;
     }
     
-    return { hash, salt };
+    return { hash };
   } catch (error) {
     console.error('Error retrieving password hash:', error);
     return null;
