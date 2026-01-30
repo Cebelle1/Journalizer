@@ -310,6 +310,38 @@ export default function SettingsScreen() {
                                             />
                                         </TouchableOpacity>
                                     </View>
+                                    
+                                    {/* Confirm New Password */}
+                                    <View style={styles.section}>
+                                        <Text style={styles.sectionTitle}>Confirm Password</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Icon 
+                                                name="lock-closed-outline" 
+                                                size={20} 
+                                                color={themeStyle.darkGrey1}
+                                                style={styles.inputIcon}
+                                            />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Confirm new password"
+                                                placeholderTextColor={themeStyle.lightGrey1}
+                                                secureTextEntry={!showConfirmPassword}
+                                                value={confirmPassword}
+                                                onChangeText={setConfirmPassword}
+                                                editable={!isLoading}
+                                            />
+                                            <TouchableOpacity 
+                                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                disabled={isLoading}
+                                            >
+                                                <Icon 
+                                                    name={showConfirmPassword ? 'eye' : 'eye-off'} 
+                                                    size={20} 
+                                                    color={themeStyle.darkGrey1}
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
 
                                     {/* Password Requirements */}
                                     <View style={styles.requirementsContainer}>
@@ -395,37 +427,7 @@ export default function SettingsScreen() {
                                     </View>
                                 </View>
 
-                                {/* Confirm New Password */}
-                                <View style={styles.section}>
-                                    <Text style={styles.sectionTitle}>Confirm Password</Text>
-                                    <View style={styles.inputContainer}>
-                                        <Icon 
-                                            name="lock-closed-outline" 
-                                            size={20} 
-                                            color={themeStyle.darkGrey1}
-                                            style={styles.inputIcon}
-                                        />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Confirm new password"
-                                            placeholderTextColor={themeStyle.lightGrey1}
-                                            secureTextEntry={!showConfirmPassword}
-                                            value={confirmPassword}
-                                            onChangeText={setConfirmPassword}
-                                            editable={!isLoading}
-                                        />
-                                        <TouchableOpacity 
-                                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            disabled={isLoading}
-                                        >
-                                            <Icon 
-                                                name={showConfirmPassword ? 'eye' : 'eye-off'} 
-                                                size={20} 
-                                                color={themeStyle.darkGrey1}
-                                            />
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
+                                
                             </ScrollView>
 
                             {/* Modal Actions */}

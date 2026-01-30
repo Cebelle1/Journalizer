@@ -260,7 +260,7 @@ export default function JournalScreen({ navigation }) {
                 }}
               >
                 <MaterialIcon
-                  name={selectedEntries.size === totalEntriesCount && totalEntriesCount > 0 ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                  name={selectedEntries.size >= totalEntriesCount && totalEntriesCount > 0 ? 'checkbox-marked' : 'checkbox-blank-outline'}
                   size={20}
                   color={themeStyle.darkPurple2}
                 />
@@ -558,13 +558,41 @@ export default function JournalScreen({ navigation }) {
     setSelectedEntries(newSelected);
   };
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = async () => {
     if (selectedEntries.size === totalEntriesCount && totalEntriesCount > 0) {
       setSelectedEntries(new Set());
       return;
     }
-    setSelectedEntries(new Set(allEntryIds));
+    Alert.alert('Select All Entries', 'This may take a while if you have many entries. Do you want to proceed?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Proceed', onPress: async () => {
+        setLoading(true);
+        try {
+          const allEntries = await loadAllEntries();
+          const allIds = allEntries.map(e => e.id);
+
+          setSelectedEntries(new Set(allIds));
+        } finally {
+          setLoading(false);
+        }}}
+    ]);
+    
   };
+
+  const loadAllEntries = async () => {
+  let page = 0;
+  let allEntries = [];
+  let hasMore = true;
+
+  while (hasMore) {
+    const batch = await readJournalEntriesPaginated(PAGE_SIZE, page * PAGE_SIZE);
+    allEntries.push(...batch);
+    hasMore = batch.length === PAGE_SIZE;
+    page++;
+  }
+
+  return allEntries;
+};
 
   const handleDeleteSelected = async () => {
     if (selectedEntries.size === 0) {

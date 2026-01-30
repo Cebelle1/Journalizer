@@ -945,7 +945,7 @@ class GoogleDriveService {
           return decryptedData;
         } catch (decryptError) {
           console.error('Failed to decrypt backup:', decryptError.message);
-          throw new Error('Failed to decrypt or parse backup file');
+          throw new Error('Failed to decrypt or parse backup file, likely due to incorrect encryption key.\n\nIncorrect app password may cause this issue.');
         }
       }
     } catch (error) {
