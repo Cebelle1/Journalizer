@@ -6,6 +6,17 @@ A privacy-focused journaling app for Android that keeps your thoughts secure and
 
 In an age where everything is cloud-synced automatically, Journalizer takes a different approach. Your journal is personal, and you should have complete control over where it lives and who can access it. That's why I built Journalizer with local storage first, giving you the option to backup only when you choose to, and only the entries you want to backup.
 
+## 📸 Screenshots
+![Journals Screen](screenshots/Journalizer_Journals.jpg)
+![Journal Entry](screenshots/Journalizer_JournalEntry.jpg)
+![Tags](screenshots/Journalizer_Tags.jpg)
+![Cloud Sync Screen](screenshots/Journalizer_CloudSyncNotConnected.jpg)
+![Cloud Backup Files](screenshots/Journalizer_CloudSyncBackupFiles.jpg)
+![Sidebar](screenshots/Journalizer_Sidebar.jpg)
+![Password](screenshots/Journalizer_Password.jpg)
+![Settings](screenshots/Journalizer_Settings.jpg)
+
+
 ## ✨ Features
 
 ### 🔒 Privacy First

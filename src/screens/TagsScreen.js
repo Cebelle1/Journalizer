@@ -12,7 +12,7 @@ import {
   Dimensions,
   Modal,
 } from 'react-native';
-import { readUniqueTags, deleteTagFromAllEntries, createTag, updateTagColor } from '../database/journalDB';
+import { readUniqueTags, deleteTagFromAllEntries, createTag, updateTagColor, renameTag } from '../database/journalDB';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { themeStyle, ThemeBackground } from '../styles/theme';
 import { navigatorStyles, headerSearchStyles, fabStyles, emptyStateStyles } from '../styles/componentStyle';
@@ -32,6 +32,10 @@ export default function TagsScreen() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedTagNames, setSelectedTagNames] = useState([]);
   const selectionActive = selectedTagNames.length > 0;
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renamingTag, setRenamingTag] = useState(null);
+  const [newNameInput, setNewNameInput] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   // Load all tags on component mount
   useEffect(() => {
@@ -195,6 +199,36 @@ export default function TagsScreen() {
     }
   };
 
+  const handleRenameTag = async () => {
+    if (!newNameInput.trim()) {
+      Alert.alert('Error', 'Please enter a new tag name');
+      return;
+    }
+
+    if (newNameInput.trim() === renamingTag?.name) {
+      setShowRenameModal(false);
+      setRenamingTag(null);
+      setNewNameInput('');
+      return;
+    }
+
+    try {
+      setRenaming(true);
+      await renameTag(renamingTag.name, newNameInput.trim());
+      setTags(prevTags => prevTags.map(tag =>
+        tag.name === renamingTag.name ? { ...tag, name: newNameInput.trim() } : tag
+      ).sort((a, b) => a.name.localeCompare(b.name)));
+      setShowRenameModal(false);
+      setRenamingTag(null);
+      setNewNameInput('');
+    } catch (error) {
+      console.error('Error renaming tag:', error);
+      Alert.alert('Error', error.message || 'Failed to rename tag');
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   const renderTagItem = ({ item: tagName }) => (
     <View style={styles.tagItemContainer}>
       <View style={styles.tagContent}>
@@ -338,20 +372,32 @@ export default function TagsScreen() {
                   <Text style={styles.tagName}>{tag.name}</Text>
                 </View>
                 {!selectionActive && (
-                  <TouchableOpacity
-                    style={[
-                      styles.deleteButton,
-                      deleting === tag.name && styles.deleteButtonDisabled,
-                    ]}
-                    onPress={() => handleDeleteTag(tag.name)}
-                    disabled={deleting === tag.name}
-                  >
-                    {deleting === tag.name ? (
-                      <ActivityIndicator size="small" color="#FF3B30" />
-                    ) : (
-                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                    )}
-                  </TouchableOpacity>
+                  <View style={styles.tagActions}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => {
+                        setRenamingTag(tag);
+                        setNewNameInput(tag.name);
+                        setShowRenameModal(true);
+                      }}
+                    >
+                      <Ionicons name="create-outline" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.deleteButton,
+                        deleting === tag.name && styles.deleteButtonDisabled,
+                      ]}
+                      onPress={() => handleDeleteTag(tag.name)}
+                      disabled={deleting === tag.name}
+                    >
+                      {deleting === tag.name ? (
+                        <ActivityIndicator size="small" color="#FF3B30" />
+                      ) : (
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 )}
               </TouchableOpacity>
             ))}
@@ -609,6 +655,60 @@ export default function TagsScreen() {
           </View>
         </View>
       )}
+
+      {/* Rename Tag Modal */}
+      {showRenameModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Rename Tag</Text>
+              <TouchableOpacity onPress={() => {
+                setShowRenameModal(false);
+                setRenamingTag(null);
+                setNewNameInput('');
+              }}>
+                <Ionicons name="close" size={24} color={themeStyle.black} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.tagInput}
+              placeholder="Enter new tag name..."
+              placeholderTextColor="#999"
+              value={newNameInput}
+              onChangeText={setNewNameInput}
+              editable={!renaming}
+              autoFocus
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowRenameModal(false);
+                  setRenamingTag(null);
+                  setNewNameInput('');
+                }}
+                disabled={renaming}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.addButton, renaming && styles.addButtonDisabled]}
+                onPress={handleRenameTag}
+                disabled={renaming}
+              >
+                {renaming ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.addButtonText}>Rename</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </ThemeBackground>
   );
 }
@@ -722,6 +822,19 @@ const styles = StyleSheet.create({
     color: themeStyle.black,
     fontWeight: '500',
     fontFamily: 'Montserrat-Regular',
+  },
+  tagActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editButton: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#E5F0FF',
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteButton: {
     padding: 10,

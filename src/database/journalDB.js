@@ -755,6 +755,32 @@ export const updateTagColor = async (tagName, color) => {
   }
 };
 
+// Rename a tag
+export const renameTag = async (oldName, newName) => {
+  try {
+    const db = await getDBInstance();
+    
+    // Check if new name already exists
+    const existingTag = await db.getFirstAsync(
+      `SELECT id FROM tags WHERE name = ?`,
+      [newName]
+    );
+    
+    if (existingTag) {
+      throw new Error('A tag with this name already exists');
+    }
+    
+    // Update the tag name
+    await db.runAsync(
+      `UPDATE tags SET name = ? WHERE name = ?`,
+      [newName, oldName]
+    );
+  } catch (error) {
+    console.error('Error renaming tag:', error);
+    throw error;
+  }
+};
+
 
 
 // Export all data for backup

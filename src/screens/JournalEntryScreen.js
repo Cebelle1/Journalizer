@@ -259,7 +259,7 @@ export default function JournalEntryScreen({ navigation, route }){
         ref={scrollViewRef}>
           
           {/* Mode Badge and Date on same level */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
           {/* Date Text that expands to Date Picker */}
           <TouchableOpacity onPress={() => isEditMode && setShowDatePicker(true)} disabled={!isEditMode} style={{ flex: 1 }}>
             <View style={[dynamicStyles.dateContainer, !isEditMode && { opacity: 0.6 }]}>  
