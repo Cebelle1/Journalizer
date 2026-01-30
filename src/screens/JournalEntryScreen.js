@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 
 // DB and Modals
-import { readJournalEntry, updateJournalEntry, createJournalEntry, readUniqueTags, deleteTagFromAllEntries } from '../database/journalDB';
+import { readJournalEntry, updateJournalEntry, createJournalEntry, readUniqueTags, deleteTagFromAllEntries, createTag } from '../database/journalDB';
 import TagModal from '../components/TagModal';
 import TagList from '../components/TagList';
 
@@ -36,6 +36,7 @@ export default function JournalEntryScreen({ navigation, route }){
   const [loading, setLoading] = useState(true);
   const scrollViewRef = useRef(null);
   const [isKeyboardOpen, setKeyboardOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(!entryId); // Edit mode by default for new entries, read-only for existing
   const { fontSizeMultiplier } = useFontSize();
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 60 });
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
@@ -48,13 +49,23 @@ export default function JournalEntryScreen({ navigation, route }){
   // Load the save icon in header
   useEffect(() => {
     navigation.setOptions({
+      headerTitle: () => (
+        <Text style={{
+          fontSize: 18,
+          fontWeight: '700',
+          color: themeStyle.black,
+          fontFamily: 'Montserrat-Bold',
+        }}>
+          Journal Entry
+        </Text>
+      ),
       headerRight: () => (
-        <TouchableOpacity onPress={onSave} style={{ marginRight: 15 }}>
-          <Ionicons name="save-outline" size={24} color={themeStyle.black} />
+        <TouchableOpacity onPress={isEditMode ? onSave : () => setIsEditMode(true)} style={{ marginRight: 15 }}>
+          <Ionicons name={isEditMode ? "save-outline" : "create-outline"} size={24} color={themeStyle.black} />
         </TouchableOpacity>
       ),
     });
-  }, [navigation, onSave, body, title, tags, date, images]);
+  }, [navigation, isEditMode, body, title, tags, date, images]);
 
   // Load existing entry if entryId is provided
   useEffect(() => {
@@ -135,7 +146,12 @@ export default function JournalEntryScreen({ navigation, route }){
         images: images
       });
     }
-      navigation.navigate('JournalScreen');
+      // Exit edit mode for existing entries, navigate away for new entries
+      if (entryId) {
+        setIsEditMode(false);
+      } else {
+        navigation.navigate('JournalScreen');
+      }
     } catch (error) {
       console.error('Failed to save journal entry:', error);
     }
@@ -152,7 +168,14 @@ export default function JournalEntryScreen({ navigation, route }){
           return existingName === tagName;
         });
         if (!tagExists) {
-          // Find the tag object from allAvailableTags
+          // If tag is an object with color, create it in database and use that object
+          if (typeof tag === 'object' && tag.color) {
+            // Create the tag in database with the specified color
+            createTag(tag.name, tag.color).catch(err => console.error('Error creating tag:', err));
+            return [...prevTags, tag];
+          }
+          
+          // Otherwise find the tag object from allAvailableTags or use default
           const tagObj = allAvailableTags.find(t => t.name === tagName);
           return [...prevTags, tagObj || { name: tagName, color: '#8E44AD' }];
         }
@@ -235,14 +258,44 @@ export default function JournalEntryScreen({ navigation, route }){
         showsVerticalScrollIndicator={true}
         ref={scrollViewRef}>
           
+          {/* Mode Badge and Date on same level */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
           {/* Date Text that expands to Date Picker */}
-        <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-          <View style={dynamicStyles.dateContainer}>  
-            <Ionicons name="calendar" size={20} style={dynamicStyles.dateIcon} />
-            <Text style={dynamicStyles.dateText}>{date.toDateString()}</Text>
+          <TouchableOpacity onPress={() => isEditMode && setShowDatePicker(true)} disabled={!isEditMode} style={{ flex: 1 }}>
+            <View style={[dynamicStyles.dateContainer, !isEditMode && { opacity: 0.6 }]}>  
+              <Ionicons name="calendar" size={20} style={dynamicStyles.dateIcon} />
+              <Text style={dynamicStyles.dateText}>{date.toDateString()}</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Mode Badge */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 10,
+            backgroundColor: 'rgba(142, 68, 173, 0.08)',
+            borderWidth: 1.5,
+            borderColor: themeStyle.darkPurple2,
+            marginLeft: 10,
+          }}>
+            <Ionicons 
+              name={isEditMode ? "pencil-outline" : "eye-outline"} 
+              size={15} 
+              color={themeStyle.darkPurple2} 
+            />
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '600',
+              color: themeStyle.darkPurple2,
+              fontFamily: 'Montserrat-SemiBold',
+            }}>
+              {isEditMode ? 'Editing' : 'Reading'}
+            </Text>
           </View>
-          
-        </TouchableOpacity>
+        </View>
         {showDatePicker && (
           <DateTimePicker
             value={date}
@@ -256,7 +309,7 @@ export default function JournalEntryScreen({ navigation, route }){
         )}
 
         {/* Tag Picker */}
-        <TouchableOpacity onPress={() => setTagModalVisible(true)}>
+        <TouchableOpacity onPress={() => isEditMode && setTagModalVisible(true)} disabled={!isEditMode} style={!isEditMode && { opacity: 0.6 }}>
           {/* Display individual tags */}
           <TagList tags={tags} />
         </TouchableOpacity>
@@ -281,13 +334,14 @@ export default function JournalEntryScreen({ navigation, route }){
           multiline
           numberOfLines={2}
           onChangeText={setTitle}
+          editable={isEditMode}
         />
 
         {/* Image area */}
         {images.length === 0 ? (
-          <TouchableOpacity onPress={pickImages} style={dynamicStyles.addBox}>
-            <Ionicons name="add-circle-outline" size={24} color="#888" />
-            <Text style={dynamicStyles.addBoxText}>Add images</Text>
+          <TouchableOpacity onPress={pickImages} style={dynamicStyles.addBox} disabled={!isEditMode} activeOpacity={isEditMode ? 0.7 : 1}>
+            <Ionicons name="add-circle-outline" size={24} color={isEditMode ? "#888" : "#bbb"} />
+            <Text style={[dynamicStyles.addBoxText, !isEditMode && { color: '#bbb' }]}>Add images</Text>
           </TouchableOpacity>
         ) : (
           <View style={dynamicStyles.carouselContainer}>
@@ -309,20 +363,24 @@ export default function JournalEntryScreen({ navigation, route }){
                   <TouchableOpacity activeOpacity={0.9} onPress={() => openImageViewer(item)}>
                     <Image source={{ uri: item }} style={dynamicStyles.carouselImage} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={dynamicStyles.carouselRemoveButton}
-                    onPress={() => removeImage(index)}
-                  >
-                    <Ionicons name="close" size={22} color="#fff" />
-                  </TouchableOpacity>
+                  {isEditMode && (
+                    <TouchableOpacity
+                      style={dynamicStyles.carouselRemoveButton}
+                      onPress={() => removeImage(index)}
+                    >
+                      <Ionicons name="close" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
             />
             <Text style={dynamicStyles.carouselCounter}>{currentImageIndex + 1} / {images.length}</Text>
             
-            <TouchableOpacity style={dynamicStyles.carouselAddButton} onPress={pickImages}>
-              <Ionicons name="add" size={22} color="#fff" />
-            </TouchableOpacity>
+            {isEditMode && (
+              <TouchableOpacity style={dynamicStyles.carouselAddButton} onPress={pickImages}>
+                <Ionicons name="add" size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -334,6 +392,7 @@ export default function JournalEntryScreen({ navigation, route }){
           multiline
           value={body}
           onChangeText={setBody}
+          editable={isEditMode}
           onContentSizeChange={() => {
             // Scroll to the bottom only if it's not the initial load
             if (isKeyboardOpen) {

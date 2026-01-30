@@ -13,8 +13,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
 import MaterialIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { ThemeBackground, themeStyle } from '../styles/theme';
-import { exportAllData, exportSingleEntry, importAllData } from '../database/journalDB';
-import GoogleDriveService from '../services/GoogleDriveService';
+import { exportAllData, importAllData } from '../database/journalDB';
+import GoogleDriveService from '../services/googleDriveService';
 import { isPasswordInitialized } from '../services/PasswordService';
 import { format } from 'date-fns';
 
@@ -142,28 +142,12 @@ export default function CloudSyncScreen() {
                 return;
             }
 
-            // Export each entry individually for backup
-            const backupDataList = [];
-            for (const entry of allData.entries) {
-                try {
-                    const backupData = await exportSingleEntry(entry.id);
-                    backupDataList.push(backupData);
-                } catch (error) {
-                    console.error(`Failed to export entry ${entry.id}:`, error);
-                }
-            }
-
-            if (backupDataList.length === 0) {
-                Alert.alert('✕ Backup Failed', 'Could not prepare your entries. Please try again.');
-                setIsLoading(false);
-                return;
-            }
-
-            // Backup each entry as individual file
-            const fileIds = await GoogleDriveService.backupSelectedEntries(backupDataList);
+            // Backup entire database as a single file
+            const fileId = await GoogleDriveService.backupJournal(allData);
             
-            console.log(`Backed up ${fileIds.length} entries`);
+            console.log(`Database backup created: ${fileId}`);
             await loadBackupFiles();
+            Alert.alert('✓ Backup Complete', `Your database has been backed up successfully.`);
         } catch (error) {
             console.error('Backup error:', error);
             Alert.alert('✕ Backup Failed', error.message || 'Could not complete backup. Check your connection.');
@@ -192,9 +176,10 @@ export default function CloudSyncScreen() {
             return;
         }
 
+        const latestBackupTime = backupFiles.length > 0 ? formatDate(backupFiles[0].modifiedTime) : '';
         Alert.alert(
-            'Restore All Backups',
-            `Restore all ${backupFiles.length} backups?`,
+            'Restore Latest Backup',
+            `Restore from: ${latestBackupTime}?\n\nExisting entries will be overridden and local entries not in the backup will be kept.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -208,26 +193,27 @@ export default function CloudSyncScreen() {
 
     const restoreAllBackups = async () => {
         setIsLoading(true);
-        let restoredCount = 0;
         try {
+            // Since backups now contain the entire database, restore only the latest one
+            if (backupFiles.length === 0) {
+                Alert.alert('☁ No Backups', 'Create a backup first before you can restore.');
+                setIsLoading(false);
+                return;
+            }
+
             // Initialize encryption key from stored password hash
             await GoogleDriveService.initializeEncryptionKey();
 
-            for (const file of backupFiles) {
-                try {
-                    const backupData = await GoogleDriveService.downloadBackup(file.id);
-                    await importAllData(backupData);
-                    restoredCount += 1;
-                } catch (error) {
-                    console.error(`Restore failed for ${file.name}:`, error);
-                }
-            }
+            // Restore only the latest backup (first in the list, ordered by createdTime desc)
+            const latestBackup = backupFiles[0];
+            const backupData = await GoogleDriveService.downloadBackup(latestBackup.id);
+            await importAllData(backupData);
 
-            Alert.alert('✓ Restore Complete', `Successfully restored ${restoredCount} backups. Your entries have been merged.`);
+            Alert.alert('✓ Restore Complete', `Successfully restored from latest backup. Your entries have been merged.`);
             await loadBackupFiles();
         } catch (error) {
             console.error('Restore error:', error);
-            Alert.alert('✕ Restore Failed', error.message || 'Could not restore backups. Please try again.');
+            Alert.alert('✕ Restore Failed', error.message || 'Could not restore backup. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -250,8 +236,7 @@ export default function CloudSyncScreen() {
 
         Alert.alert(
             'Restore Backup',
-            `Restore from "${fileName}"?`,
-            `Are you sure you want to restore from "${fileName}"?\n\nThis will merge your local entries with the backup. Local entries not in the backup will be kept.`,
+            `Restore from "${fileName}"?\n\nExisting entries will be overridden and local entries not in the backup will be kept.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -276,6 +261,7 @@ export default function CloudSyncScreen() {
             await importAllData(backupData);
             
             console.log('Backup restored successfully');
+            Alert.alert('✓ Restore Complete', `Backup restored successfully`);
         } catch (error) {
             console.error('Restore error:', error);
             Alert.alert('✕ Restore Failed', error.message || 'Could not restore this backup. Please try again.');
@@ -508,10 +494,10 @@ export default function CloudSyncScreen() {
                                             color={backupFiles.length === 0 ? themeStyle.darkGrey1 : themeStyle.darkPurple2} 
                                         />
                                         <Text style={[cloudSyncStyles.actionCardTitle, backupFiles.length === 0 && { color: themeStyle.darkGrey1 }]}>
-                                            Restore All
+                                            Restore Latest
                                         </Text>
                                         <Text style={[cloudSyncStyles.actionCardSubtitle, backupFiles.length === 0 && { color: themeStyle.darkGrey1 }]}>
-                                            {backupFiles.length === 0 ? 'No backups' : 'Latest backup'}
+                                            {backupFiles.length === 0 ? 'No backups' : formatDate(backupFiles[0].modifiedTime)}
                                         </Text>
                                     </>
                                 )}
@@ -605,7 +591,7 @@ export default function CloudSyncScreen() {
                                             {file.name}
                                         </Text>
                                         <Text style={cloudSyncStyles.backupItemMeta}>
-                                            Saved: {formatDate(file.modifiedTime)} • {formatFileSize(file.size)}
+                                            Entries: {file.appProperties?.entryCount || '?'} • {formatFileSize(file.size)}
                                         </Text>
                                     </View>
                                 </View>

@@ -28,7 +28,7 @@ In an age where everything is cloud-synced automatically, Journalizer takes a di
 ### ☁️ Cloud Backup (Optional)
 - **Google Drive Integration** - Optionally backup entries to Google Drive
 - **Individual Entry Backup** - Backup selected entries or all entries at once
-- **Easy Restore** - Restore individual backups or batch restore all
+- **Easy Restore** - Restore from a specific backup or restore from the latest backup
 - **Merge-Friendly** - Restored entries merge with local data, keeping local-only entries intact
 - **End-to-End Encrypted** - Files encrypted on cloud with AES-256 encryption before upload
 
@@ -121,7 +121,7 @@ If you want to use the Google Drive backup feature:
 1. Go to Cloud Sync screen
 2. View your backup files
 3. Tap the restore icon on any backup to restore it
-4. Or tap "Restore All" to restore all backups at once
+4. Or tap "Restore Latest" to restore latest backup at once
 
 ## 🛠️ Built With
 

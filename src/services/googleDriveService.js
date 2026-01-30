@@ -539,22 +539,18 @@ class GoogleDriveService {
       // Get or create backup folder
       const folderId = await this.getOrCreateBackupFolder();
 
-      // Delete existing full backups to overwrite
-      try {
-        const existingBackups = await this.searchFiles(
-          `'${folderId}' in parents and appProperties has { key='app' and value='journalizer' } and appProperties has { key='type' and value='backup' } and trashed=false`
-        );
-        for (const backup of existingBackups) {
-          await this.deleteBackup(backup.id);
-        }
-      } catch (error) {
-        console.warn('Could not delete existing backups:', error.message);
-      }
-
-      // Create human-readable date format: YYYY-MM-DD
+      // Create filename with timestamp: Backup_YYYY-MM-DD_HH-MM-SS.json
       const now = new Date();
-      const dateStr = now.toISOString().replace(/[:.]/g, '-').split('T')[0];
-      const fileName = `Backup_${dateStr}.json`;
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const fileName = `Backup_${year}-${month}-${day}_${hours}-${minutes}-${seconds}.json`;
+
+      // Count entries in the backup
+      const entryCount = entries.entries ? entries.entries.length : 0;
 
       // Step 1: Create file with metadata only
       const metadata = {
@@ -564,6 +560,8 @@ class GoogleDriveService {
         appProperties: {
           app: 'journalizer',
           type: 'backup',
+          timestamp: now.toISOString(),
+          entryCount: String(entryCount),
         },
       };
 

@@ -8,6 +8,14 @@ import { ThemeBackground } from '../styles/theme.js';
 export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, currentTags = [], allTags = [] }) {
   const [searchText, setSearchText] = useState('');
   const [filteredAvailableTags, setFilteredAvailableTags] = useState([]);
+  const [selectedColor, setSelectedColor] = useState('#8E44AD');
+
+  // Predefined color palette for tags
+  const COLOR_PALETTE = [
+    '#821A1A', '#E74C3C', '#FF9900',
+    '#141480', '#0059ff', '#007222',
+    '#7300a0','#ca00b9', '#C39BD3', '#34495E'
+  ];
 
   // Filter available tags (exclude already added ones)
   useEffect(() => {
@@ -55,9 +63,10 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
         handleSelectTag(searchText.trim());
         return;
       }
-      // Create new tag and add to current entry
-      onAddTag(searchText.trim());
+      // Create new tag with selected color and add to current entry
+      onAddTag({ name: searchText.trim(), color: selectedColor });
       setSearchText('');
+      setSelectedColor('#8E44AD');
     }
   };
 
@@ -145,6 +154,30 @@ export default function TagModal({ visible, onClose, onAddTag, onRemoveTag, curr
               </Text>
             )}
           </ScrollView>
+
+          {/* Color picker for new tags */}
+          {showCreateButton && (
+            <View style={styles.colorPickerContainer}>
+              <Text style={styles.colorPickerTitle}>Pick a color:</Text>
+              <View style={styles.colorPalette}>
+                {COLOR_PALETTE.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      selectedColor === color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => setSelectedColor(color)}
+                  >
+                    {selectedColor === color && (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Create new tag button */}
           {showCreateButton && (
@@ -288,5 +321,36 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 16,
     fontFamily: 'Montserrat-Regular',
+  },
+  colorPickerContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  colorPickerTitle: {
+    fontSize: 14,
+    fontFamily: 'Montserrat-Bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  colorPalette: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'flex-start',
+  },
+  colorOption: {
+    width: 45,
+    height: 45,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorOptionSelected: {
+    borderColor: '#000',
+    borderWidth: 3,
   },
 });

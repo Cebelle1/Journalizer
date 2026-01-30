@@ -49,7 +49,6 @@ export default function TagsScreen() {
     try {
       setLoading(true);
       const uniqueTags = await readUniqueTags();
-      console.log('Loaded tags from readUniqueTags:', uniqueTags);
       setTags(uniqueTags || []);
       // Clear selection if tags change
       setSelectedTagNames((prev) => prev.filter((name) => uniqueTags.some((tag) => tag.name === name)));
@@ -541,7 +540,7 @@ export default function TagsScreen() {
               {/* Cool Colors */}
               <Text style={styles.colorCategoryTitle}>Cool Colors</Text>
               <View style={styles.colorGridLarge}>
-                {['#141480', '#0059ff', '#00CED1', '#007222', '#01b94e', '#93f393'].map((color) => {
+                {['#141480', '#0059ff', '#00CED1', '#007222', '#27AE60', '#93f393'].map((color) => {
                   const currentTagColor = tags.find(t => t.name === editingTag)?.color || '#8E44AD';
                   return (
                     <TouchableOpacity
@@ -564,7 +563,7 @@ export default function TagsScreen() {
               {/* Purple & Pink Colors */}
               <Text style={styles.colorCategoryTitle}>Purple & Pink</Text>
               <View style={styles.colorGridLarge}>
-                {['#7300a0', '#ec47f1', '#ebb1fa', '#ca00b9', '#DA70D6', '#C39BD3'].map((color) => {
+                {['#7300a0', '#8E44AD', '#ec47f1', '#ca00b9', '#DA70D6', '#C39BD3'].map((color) => {
                   const currentTagColor = tags.find(t => t.name === editingTag)?.color || '#8E44AD';
                   return (
                     <TouchableOpacity

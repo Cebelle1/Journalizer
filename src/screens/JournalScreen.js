@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity,
   FlatList, StyleSheet,
@@ -24,7 +24,7 @@ import SearchModal from '../components/SearchModal';
 
 // Database
 import { readAllJournalEntries, deleteJournalEntry, searchJournalEntries, exportSingleEntry } from '../database/journalDB';
-import GoogleDriveService from '../services/GoogleDriveService';
+import GoogleDriveService from '../services/googleDriveService';
 
 export default function JournalScreen({ navigation }) {
   const [journalEntries, setJournalEntries] = useState([]);
@@ -33,7 +33,6 @@ export default function JournalScreen({ navigation }) {
   const [searchInput, setSearchInput] = useState('');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState(new Set());
-  const [isBackingUp, setIsBackingUp] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { fontSizeMultiplier } = useFontSize();
   const [filters, setFilters] = useState({
@@ -46,8 +45,97 @@ export default function JournalScreen({ navigation }) {
     setSearchModalVisible(true);
   }, []);
 
-  const totalEntriesCount = journalEntries.reduce((sum, group) => sum + (group.entries?.length || 0), 0);
-  const allEntryIds = journalEntries.flatMap((group) => group.entries?.map((entry) => entry.id) || []);
+  const totalEntriesCount = useMemo(() => 
+    journalEntries.reduce((sum, group) => sum + (group.entries?.length || 0), 0),
+    [journalEntries]
+  );
+  
+  const allEntryIds = useMemo(() => 
+    journalEntries.flatMap((group) => group.entries?.map((entry) => entry.id) || []),
+    [journalEntries]
+  );
+
+  // Generate styles with dynamic font sizes - memoized
+  const dynamicStyles = useMemo(() => createStyles(fontSizeMultiplier), [fontSizeMultiplier]);
+
+  const dynamicTagStyles = useMemo(() => createDynamicTagStylesJournalScreen(fontSizeMultiplier), [fontSizeMultiplier]);
+
+  // Memoize flatListData to prevent recreation on every render
+  const flatListData = useMemo(() => 
+    journalEntries.flatMap((yearGroup) => [
+      { year: yearGroup.year, id: yearGroup.year },
+      ...yearGroup.entries,
+    ]),
+    [journalEntries]
+  );
+
+  // Memoize renderItem function to prevent recreation on every render
+  const memoizedRenderItem = useCallback(({ item }) => {
+    if (item.year) {
+      return (
+        <Text style={dynamicStyles.yearDivider}>{item.year}</Text>
+      );
+    }
+
+    const entry = item;
+    const isSelected = selectedEntries.has(entry.id);
+
+    return (
+      <TouchableOpacity
+        key={entry.id}
+        style={[dynamicStyles.entry, isSelected && { backgroundColor: themeStyle.lightPurple1 }]} 
+        onLongPress={() => {
+          if (!isSelectionMode) {
+            setIsSelectionMode(true);
+            toggleSelection(entry.id);
+          }
+        }}
+        onPress={() => {
+          if (isSelectionMode) {
+            toggleSelection(entry.id);
+          } else {
+            navigation.navigate('Journal Entry', { id: entry.id });
+          }
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          {isSelectionMode && (
+            <MaterialIcon
+              name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
+              size={24}
+              color={themeStyle.darkPurple2}
+              style={{ marginRight: 10, marginTop: 5 }}
+            />
+          )}
+          <View style={{ flex: 1 }}>
+            <View>
+                {/* Title and Date */}
+                <View style={dynamicStyles.entryTextContainer}>
+                  <Text style={dynamicStyles.entryTextTitle} numberOfLines={1}>
+                    {entry.title}
+                  </Text>
+                  <Text style={dynamicStyles.entryTextDate}>{formatYearMonthDay(entry.date)}</Text>
+                </View>
+
+                {/* Tags */}
+                <View style={dynamicStyles.entryTextContainer}>
+                  <TagList
+                    tags={entry.tags || []}
+                    style={dynamicTagStyles} />
+                </View>
+
+                <View style={entryStyles.divider} />
+
+                {/* Body */}
+                <Text style={dynamicStyles.entryText} numberOfLines={6}>
+                  {entry.body}
+                </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [dynamicStyles, dynamicTagStyles, selectedEntries, isSelectionMode, navigation]);
 
   const clearFilters = useCallback(() => {
     setFilters({
@@ -190,25 +278,6 @@ export default function JournalScreen({ navigation }) {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={handleBackupSelected}
-                disabled={isBackingUp || selectedEntries.size === 0}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  backgroundColor: themeStyle.darkPurple2,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: isBackingUp || selectedEntries.size === 0 ? 0.5 : 1,
-                }}
-              >
-                {isBackingUp ? (
-                  <ActivityIndicator size="small" color={themeStyle.white} />
-                ) : (
-                  <Ionicons name="cloud-upload-outline" size={18} color={themeStyle.white} />
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
                 onPress={() => {
                   setIsSelectionMode(false);
                   setSelectedEntries(new Set());
@@ -281,7 +350,7 @@ export default function JournalScreen({ navigation }) {
       headerLeft: null,
       headerRight: null,
     });
-  }, [navigation, hasActiveFilters, clearFilters, searchInput, filters, isSelectionMode, selectedEntries, totalEntriesCount, isDeleting, isBackingUp, allEntryIds]);
+  }, [navigation, hasActiveFilters, clearFilters, searchInput, filters, isSelectionMode, selectedEntries, totalEntriesCount, isDeleting, allEntryIds]);
 
   // Function to load and group entries
   const loadEntries = useCallback(async () => {
@@ -475,63 +544,6 @@ export default function JournalScreen({ navigation }) {
     );
   };
 
-  const handleBackupSelected = async () => {
-    if (selectedEntries.size === 0) {
-      Alert.alert('No Selection', 'Please select at least one entry to backup');
-      return;
-    }
-
-    Alert.alert(
-      'Backup Selected Entries',
-      `Backup ${selectedEntries.size} selected entries to Google Drive?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Backup',
-          onPress: async () => {
-            setIsBackingUp(true);
-            try {
-              const isAuthenticated = await GoogleDriveService.isAuthenticated();
-              if (!isAuthenticated) {
-                Alert.alert('Not Authenticated', 'Please sign in to Google Drive first');
-                setIsBackingUp(false);
-                return;
-              }
-
-              // Export each selected entry and get backup data
-              const backupDataList = [];
-              for (const entryId of selectedEntries) {
-                try {
-                  const backupData = await exportSingleEntry(entryId);
-                  backupDataList.push(backupData);
-                } catch (error) {
-                  console.error(`Failed to export entry ${entryId}:`, error);
-                }
-              }
-
-              if (backupDataList.length === 0) {
-                Alert.alert('Error', 'Failed to prepare entries for backup');
-                return;
-              }
-
-              const fileIds = await GoogleDriveService.backupSelectedEntries(backupDataList);
-              Alert.alert('Success', `Backed up ${fileIds.length} entries to Google Drive`);
-              
-              // Clear selection and exit selection mode
-              setSelectedEntries(new Set());
-              setIsSelectionMode(false);
-            } catch (error) {
-              console.error('Backup error:', error);
-              Alert.alert('Error', 'Failed to backup entries: ' + error.message);
-            } finally {
-              setIsBackingUp(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const renderItem = ({ item }, dynamicStyles) => {
     if (item.year) {
       {/* Year Divider */}
@@ -605,15 +617,6 @@ export default function JournalScreen({ navigation }) {
     return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
-  // Generate styles with dynamic font sizes
-  const dynamicStyles = createStyles(fontSizeMultiplier);
-  const dynamicTagStyles = createDynamicTagStylesJournalScreen(fontSizeMultiplier);
-
-  const flatListData = journalEntries.flatMap((yearGroup) => [
-    { year: yearGroup.year, id: yearGroup.year }, // Year Divider
-    ...yearGroup.entries,                         // Insert entries under the year
-  ]);
-
   return (
     <ThemeBackground>
       {/* Header with Select/Backup buttons when in selection mode */}
@@ -632,7 +635,11 @@ export default function JournalScreen({ navigation }) {
           contentContainerStyle={dynamicStyles.scrollContainer}
           data={flatListData}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={(itemData) => renderItem(itemData, dynamicStyles)}                         // Main Entry contents
+          renderItem={memoizedRenderItem}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={10}
         />
       )}
 

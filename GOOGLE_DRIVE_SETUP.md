@@ -79,7 +79,7 @@ or from the **eas web > Project Settings > Credentials > com.anonymous.Journaliz
 
 ## Step 5: Configure Your App
 
-1. Open `src/services/GoogleDriveService.js`
+1. Open `src/services/googleDriveService.js`
 2. Replace the placeholder with your Web Client ID:
 
 ```javascript
@@ -140,7 +140,7 @@ expo build:android
 
 ### "Invalid Client" Error
 
-- Double-check your client IDs in `GoogleDriveService.js`
+- Double-check your client IDs in `googleDriveService.js`
 - Make sure you're using the Web Client ID as the main `GOOGLE_CLIENT_ID`
 - Verify the package name matches your Android app
 
