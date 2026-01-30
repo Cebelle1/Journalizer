@@ -4,7 +4,7 @@ A privacy-focused journaling app for Android that keeps your thoughts secure and
 
 ## 💡 Why Journalizer?
 
-In an age where everything is cloud-synced automatically, Journalizer takes a different approach. Your journal is personal, and you should have complete control over where it lives and who can access it. That's why I built Journalizer with local storage first, giving you the option to backup only when you choose to, and only the entries you want to backup.
+In an age where everything is cloud-synced automatically, Journalizer takes a different approach. Your journal is personal, and you should have complete control over where it lives and who can access it. That's why I built Journalizer with local storage first, giving you the option to backup only when you choose to.
 
 ## 📸 Screenshots
 <p align="center">
@@ -24,12 +24,11 @@ In an age where everything is cloud-synced automatically, Journalizer takes a di
 ### 🔒 Privacy First
 - **Local Storage by Default** - All your journal entries are stored locally on your device, ensuring your private thoughts stay private
 - **Optional Cloud Sync** - Sync only when you choose to, maintaining full control over your data
-- **Selective Backup** - Choose which entries to backup to Google Drive instead of syncing everything automatically
 
 ### 📝 Journaling
 - **Rich Text Entries** - Write detailed journal entries with timestamps
 - **Multi-Selection Mode** - Long-press to select multiple entries for batch operations
-- **Search Functionality** - Quickly find entries with powerful search
+- **Search Functionality** - Quickly find entries with powerful search with date, tag, and title filtering
 - **Date Organization** - Entries organized chronologically for easy browsing
 
 ### 🏷️ Organization
@@ -47,34 +46,24 @@ In an age where everything is cloud-synced automatically, Journalizer takes a di
 
 ### 🎨 User Experience
 - **Clean Interface** - Beautiful gradient themes with intuitive navigation
-- **Dark Theme Support** - Easy on the eyes for night journaling
 - **Smooth Navigation** - Drawer navigation for quick access to all features
 - **Offline First** - Works perfectly without internet connection
 - **Customizable Font Size** - Adjust text size (Small, Medium, Large) directly from Settings
-- **Live Preview** - See font size changes in real-time before applying
 
 ## 🔐 Privacy & Security
 
 Journalizer prioritizes your privacy:
 
-- **Local-first approach** - All entries stored locally on your device
-- **You control syncing** - Decide when and what to backup; no automatic syncing
 - **No tracking** - No analytics or user data collection
 - **Open source** - Full transparency in code and data handling
 
 ### 🔒 Password Protection & Encryption
 
 #### App Password
-- **Optional Password Protection** - Set up an app password in Settings to protect your journal entries from unauthorized access
-- **Strong Password Requirements** - Passwords must meet security standards:
-  - Minimum 8 characters, maximum 128 characters
-  - At least one uppercase letter
-  - At least one lowercase letter
-  - At least one number
-  - At least one special character
+- **Password Protection** - Set up an app password in Settings to protect your journal entries from unauthorized access
+- **Strong Password Requirements** - Passwords must meet security standards
 - **PBKDF2 Hashing** - Passwords are hashed using PBKDF2 with 1,000 iterations and a fixed salt for deterministic hash generation
 - **Secure Storage** - Password hashes are stored securely in the device's secure storage (Secure Enclave on iOS, KeyStore on Android)
-- **Deterministic Hashing** - Same password always produces the same hash, enabling seamless app reinstallation and cloud restore
 
 #### Cloud Backup Encryption
 - **End-to-End Encryption** - When you backup entries to Google Drive, they are encrypted before upload
@@ -85,7 +74,6 @@ Journalizer prioritizes your privacy:
 #### Security Best Practices
 - Your password is never transmitted to external servers
 - Only encrypted backups are uploaded to Google Drive
-- The encryption key is your password hash (stored locally in secure storage)
 - All cryptographic operations use industry-standard libraries (CryptoJS)
 - After reinstalling the app, use the same password to restore your encrypted backups
 
