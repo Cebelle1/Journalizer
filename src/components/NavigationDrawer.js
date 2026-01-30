@@ -9,16 +9,8 @@ import { Avatar, Badge } from "react-native-paper";
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import {
   GradientTextBT,
-  GradientTextTB,
-  GradientTextLR,
-  GradientTextRL,
 } from "../styles/GradientText";
-import {
-  GradientIconBT,
-  GradientIconLR,
-  GradientIconRL,
-  GradientIconTB,
-} from "../styles/GradientIcon";
+
 
 // Assets
 import MatCommIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -93,11 +85,6 @@ export default function NavigationDrawer({ navigation }) {
         />
 
       </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <IonicIcon name="log-out-outline" size={24} color="#000" />
-      </View>
     </View>
   );
 }
